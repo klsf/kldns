@@ -38,15 +38,15 @@ if($action == 'deluser'){
 	$dns=getRequest('dns','get');
 	$dnsApi = Dnsapi::getApi($dns);
 	if($dns=='dnspod'){
-		if (empty(config('DnspodTokenID')) || empty(config('DnspodToken'))) {
+		if (is_null(config('DnspodTokenID')) || is_null(config('DnspodToken'))) {
 			skip('apiConfig.php','请先配置DnsPod Token');
 		}
 	}elseif($dns=='aliyun'){
-		if (empty(config('AliyunAccessKeyId')) || empty(config('AliyunAccessKeySecret'))) {
+		if (is_null(config('AliyunAccessKeyId')) || is_null(config('AliyunAccessKeySecret'))) {
 			skip('apiConfig.php','请先配置AliYun AccessKey');
 		}
 	}elseif($dns=='cloudxns'){
-		if (empty(config('CloudXnsSecretKey')) || empty(config('CloudXnsSecretKey'))) {
+		if (is_null(config('CloudXnsSecretKey')) || is_null(config('CloudXnsSecretKey'))) {
 			skip('apiConfig.php','请先配置CloudXNS API KEY');
 		}
 	}else{

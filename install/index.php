@@ -30,8 +30,7 @@ if($action=='install'){
 			$sqls=explode(';', $sqls);
 			$success=0;$error=0;$errorMsg=null;
 			foreach ($sqls as $value) {
-				$value=trim($value);
-				if(!empty($value)){
+				if(!is_null(trim($value))){
 					if($db->exec($value)===false){
 						$error++;
 						$errorMsg.=$db->errorInfo()[2]."<br>";
