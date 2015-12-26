@@ -50,13 +50,13 @@ require_once('../head.php');
 										</div>
 									</div>
 									<div class="form-group">
-										<label class="col-sm-2 control-label">域名</label>
-										<div class="col-sm-8">
+										<label class="col-sm-2 col-xs-12 control-label">域名</label>
+										<div class="col-sm-8 col-xs-8">
 											<select name="domain" class="form-control ropdown-toggle" id="domainSelect">
 											
 											</select>
 										</div>
-										<div class="col-sm-2">
+										<div class="col-sm-2 col-xs-4">
 											<span class="btn btn-warning" id="reloadBtn">刷新</span>
 										</div>
 									</div>

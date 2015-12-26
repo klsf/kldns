@@ -1,6 +1,22 @@
 <?php
 require_once('common.php');
 
+$action=getRequest('action','post');
+if($action == 'zd'){
+	$domain_id=getRequest('domain_id','post');
+	$uid=getRequest('uid','post');
+	if(!is_numeric($uid)){
+		$alert='UID格式不正确！';
+	}elseif(empty($domain_id)){
+		$alert='域名ID不能为空！';
+	}else{
+		$sql = 'UPDATE `kldns_records` SET `name`=:name,`type`=:type,`value`=:value,`updatetime`=NOW() WHERE (`record_id`=:record_id)';
+		$stmt = $db->prepare('UPDATE kldns_domains SET allow_uid=:uid WHERE (domain_id=:domain_id)');
+		$stmt->execute(array(':domain_id'=>$domain_id,':uid'=>$uid));
+	
+	}
+
+}
 
 function getRecordCount($domain_id){
 	global $db;
@@ -34,16 +50,27 @@ require_once('../head.php');
 				</div>
 				<div class="col-xs-12">
 					<div class="panel panel-success">
-						<div class="panel-heading text-center">DnsPod域名列表</div>
+						<div class="panel-heading text-center">域名列表</div>
 						<div class="panel-body">
 							<div class="list-group text-success">
+								<div class="list-group-item">[UID]代表指定某个用户能解析此域名，[UID:0]代表所有有均可以解析此域名！</div>
+								<div class="list-group-item"><form action="#" method="post"><input type="hidden" name="action" class="form-control" value="zd">
+								指定域名：<select name="domain_id">
+								<?php
+								foreach ($domainList as $value) {
+									echo '<option value="'.$value['domain_id'].'">'.$value['name'].'</option>';
+								}
+								?>
+								</select> 所属权归 <input type="text" name="uid" placeholder="输入用户UID"> 使用！
+								<input type="submit" value="设定">
+								</form></div>
 								<?php
 								$img['dnspod']='<img src="/assets/images/dnspod.jpg" width=50 height=18>&nbsp;&nbsp;';
 								$img['aliyun']='<img src="/assets/images/aliyun.jpg" width=50 height=18>&nbsp;&nbsp;';
 								$img['cloudxns']='<img src="/assets/images/cloudxns.jpg" width=50 height=18>&nbsp;&nbsp;';
 								if(!empty($domainList)){
 									foreach ($domainList as $value) {
-										echo'<a href="recordList.php?domain_id='.$value['domain_id'].'" class="list-group-item">'.$img[$value['dns']].$value['name'].' <span class="badge">'.getRecordCount($value['domain_id']).'</span></a>';
+										echo'<a href="recordList.php?domain_id='.$value['domain_id'].'" class="list-group-item">'.$img[$value['dns']].$value['name'].'-[UID:'.$value['allow_uid'].'] <span class="badge">'.getRecordCount($value['domain_id']).'</span></a>';
 									}
 								}
 								?>
@@ -76,7 +103,8 @@ function loadScript(c) {
 	a.src = c;
 	document.getElementsByTagName("head")[0].appendChild(a)
 }
-$(function () {  
+$(function () {
+<?php if(!empty($alert)){ echo "alert('{$alert}')";}?>
 	$(document).on("click",".delUser",function(){
 		var uid=$(this).attr('uid');
 		var url="ajax.php?action=deluser&uid="+uid;

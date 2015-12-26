@@ -7,27 +7,28 @@ if(!isset($loginuser['uid'])){
 $action = isset($_POST['action'])?$_POST['action']:null;
 //添加纪录
 if($action == 'addrecord'){
-	$domain_id = trim($_POST['domain_id']);
-	$name = trim($_POST['name']);
-	$type = trim($_POST['type']);
-	$value = trim($_POST['value']);
+	$domain_id = trim(getRequest('domain_id','post'));
+	$name = trim(getRequest('name','post'));
+	$type = trim(getRequest('type','post'));
+	$value = trim(getRequest('value','post'));
+	$code=getSafe(getRequest('code','post'));
 
-	$stmt = $db->prepare('SELECT dns,name FROM `kldns_domains` WHERE domain_id=:id limit 1');//查找是那个解析平台的域名
-	$stmt->execute(array(':id'=>$domain_id));
-	if (!$row=$stmt->fetch(PDO::FETCH_ASSOC)) {
+	$stmt = $db->prepare('SELECT dns,name FROM `kldns_domains` WHERE domain_id=:id and (allow_uid=0 or allow_uid=:uid) limit 1');//查找是那个解析平台的域名
+	$stmt->execute(array(':id'=>$domain_id,':uid'=>$loginuser['uid']));
+	if(strlen($code)!=4 || !isset($_COOKIE['verification']) || md5(strtolower($code))!==$_COOKIE['verification']){
+		$errorMsg = '验证码不正确！';
+	}elseif (!$row=$stmt->fetch(PDO::FETCH_ASSOC)) {
 		$errorMsg = '域名不存在';
-		$actionlock='addrecord';
 	}else{
+		setCookie('verification',null,-1,'/');//销毁验证码
 		$dnsApi = Dnsapi::getApi($row['dns']);
 		if($ret = $dnsApi->addRecord($domain_id,$name,$type,$value,$row['name'])){
 			$stmt = $db->prepare('INSERT INTO `kldns_records` (`record_id`, `uid`, `domain_id`, `name`, `type`, `value`, `updatetime`) VALUES (:record_id, :uid, :domain_id, :name, :type, :value, NOW())');
 			if(!$stmt->execute(array(':record_id'=>$ret['record_id'],':uid'=>$loginuser['uid'],':domain_id'=>$domain_id,':name'=>$ret['name'],':type'=>$type,':value'=>$value))){
 				$errorMsg = '添加成功，保存数据库失败！';
-				$actionlock='addrecord';
 			}
 		}else{
 			$errorMsg = $dnsApi->errorMsg;
-			$actionlock='addrecord';
 		}
 	}
 
@@ -37,7 +38,7 @@ if($action == 'addrecord'){
 $query = $db->prepare('SELECT a.*,b.name as domain,b.dns FROM `kldns_records` as a left join `kldns_domains` as b on b.domain_id=a.domain_id WHERE a.`uid`=:uid');
 $query->execute(array(':uid'=>$loginuser['uid']));
 $records = $query->fetchAll(PDO::FETCH_ASSOC);
-$domains = $db->query('SELECT * FROM kldns_domains')->fetchAll(PDO::FETCH_ASSOC);
+$domains = $db->query('SELECT * FROM kldns_domains where allow_uid=0 or allow_uid='.$loginuser['uid'])->fetchAll(PDO::FETCH_ASSOC);
 
 $title='域名控制台';//本页标题
 require_once('head.php');
@@ -84,7 +85,7 @@ require_once('head.php');
 							</div>
 							<div class="tab-pane fade" id="add">
 								<?php
-								if(isset($actionlock) && $actionlock == 'addrecord'){
+								if(!empty($errorMsg)){
 									echo'<script type="text/javascript">$("#addtab").click();</script>';
 									echo '<div class="alert alert-danger text-center" role="alert">'.$errorMsg.'</div>';
 								}
@@ -126,7 +127,13 @@ require_once('head.php');
 											<input type="text" name="value" class="form-control" placeholder="127.0.0.1">
 										</div>
 									</div>
-									
+									<div class="form-group">
+										<label class="col-sm-2 control-label">验证码</label>
+										<label class="col-sm-2 control-label"><img src="/code.php" onclick="this.src='/code.php?'+Math.random();" title="点击更换验证码"></label>
+										<div class="col-sm-8">
+											<input type="text" name="code" class="form-control">
+										</div>
+									</div>
 									<div class="form-group">	
   										<div class="col-sm-offset-2 col-sm-10">
 											<button type="submit" class="btn btn-success btn-block">添加记录</button>
