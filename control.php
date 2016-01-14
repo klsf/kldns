@@ -21,14 +21,26 @@ if($action == 'addrecord'){
 		$errorMsg = '域名不存在';
 	}else{
 		setCookie('verification',null,-1,'/');//销毁验证码
-		$dnsApi = Dnsapi::getApi($row['dns']);
-		if($ret = $dnsApi->addRecord($domain_id,$name,$type,$value,$row['name'])){
-			$stmt = $db->prepare('INSERT INTO `kldns_records` (`record_id`, `uid`, `domain_id`, `name`, `type`, `value`, `updatetime`) VALUES (:record_id, :uid, :domain_id, :name, :type, :value, NOW())');
-			if(!$stmt->execute(array(':record_id'=>$ret['record_id'],':uid'=>$loginuser['uid'],':domain_id'=>$domain_id,':name'=>$ret['name'],':type'=>$type,':value'=>$value))){
-				$errorMsg = '添加成功，保存数据库失败！';
+		if(config('allowNum')<0){
+			$errorMsg = '管理员已停止用户自助解析功能！';
+		}elseif(config('allowNum')!=0){
+			//查询用户已添加纪录数
+			$stmt=$db->prepare('SELECT record_id FROM `kldns_records` where uid=:uid');//获取记录总数
+			$stmt->execute(array('uid'=>$loginuser['uid']));
+			if($stmt->rowCount() >= config('allowNum')){
+				$errorMsg = '你的解析记录数已超过最大限额：'.config('allowNum');
 			}
-		}else{
-			$errorMsg = $dnsApi->errorMsg;
+		}
+		if(!isset($errorMsg)){
+			$dnsApi = Dnsapi::getApi($row['dns']);
+			if($ret = $dnsApi->addRecord($domain_id,$name,$type,$value,$row['name'])){
+				$stmt = $db->prepare('INSERT INTO `kldns_records` (`record_id`, `uid`, `domain_id`, `name`, `type`, `value`, `updatetime`) VALUES (:record_id, :uid, :domain_id, :name, :type, :value, NOW())');
+				if(!$stmt->execute(array(':record_id'=>$ret['record_id'],':uid'=>$loginuser['uid'],':domain_id'=>$domain_id,':name'=>$ret['name'],':type'=>$type,':value'=>$value))){
+					$errorMsg = '添加成功，保存数据库失败！';
+				}
+			}else{
+				$errorMsg = $dnsApi->errorMsg;
+			}
 		}
 	}
 
@@ -38,7 +50,9 @@ if($action == 'addrecord'){
 $query = $db->prepare('SELECT a.*,b.name as domain,b.dns FROM `kldns_records` as a left join `kldns_domains` as b on b.domain_id=a.domain_id WHERE a.`uid`=:uid');
 $query->execute(array(':uid'=>$loginuser['uid']));
 $records = $query->fetchAll(PDO::FETCH_ASSOC);
-$domains = $db->query('SELECT * FROM kldns_domains where allow_uid=0 or allow_uid='.$loginuser['uid'])->fetchAll(PDO::FETCH_ASSOC);
+$query = $db->prepare('SELECT * FROM kldns_domains where allow_uid=0 or allow_uid=:uid');
+$query->execute(array(':uid'=>$loginuser['uid']));
+$domains = $query->fetchAll(PDO::FETCH_ASSOC);
 
 $title='域名控制台';//本页标题
 require_once('head.php');

@@ -57,7 +57,8 @@ if($action=='login'){
 			setCookie('kldns_sid',$sid,time()+3600*24*7,'/');
 			exit("<script language='javascript'>alert('注册成功！马上进入控制面板！');window.location.href='/control.php';</script>");
 		}else{
-			$regMsg='注册失败:保存数据库出错'.$stmt->errorInfo()[2];
+			$dberror=$db->errorInfo();
+			$regMsg='注册失败:保存数据库出错'.$dberror[2];
 		}	
 	}
 }

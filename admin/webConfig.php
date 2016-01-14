@@ -6,7 +6,8 @@ if($action=='set'){
 	$webName=getRequest('webName','post');
 	$webFoot=getRequest('webFoot','post');
 	$webAdmin=getRequest('webAdmin','post');
-
+	$allowNum=getRequest('allowNum','post');
+	if(!is_numeric($allowNum)) $allowNum=0;
 	if(strlen($webName)<2){
 		$errorMsg='网站名称长度不能小于2';
 	}elseif($webAdmin && strlen($webAdmin)<5){
@@ -16,11 +17,13 @@ if($action=='set'){
 		$stmt = $db->prepare("insert into kldns_configs set `vkey`=:vkey,`value`=:value on duplicate key update `value`=:value");
 		$stmt->execute(array(':vkey'=>'webName',':value'=>$webName));
 		$stmt->execute(array(':vkey'=>'webFoot',':value'=>$webFoot));
+		$stmt->execute(array(':vkey'=>'allowNum',':value'=>$allowNum));
 		if($webAdmin){
 			$stmt->execute(array(':vkey'=>'webAdmin',':value'=>getPwd($webAdmin)));
 		}
 		config('webName',$webName);
 		config('webFoot',$webFoot);
+		config('allowNum',$allowNum);
 		
 	}
 
@@ -58,7 +61,13 @@ require_once('../head.php');
 											<textarea name="webFoot" class="form-control" rows="5"><?php echo htmlspecialchars(base64_decode(config('webFoot')));?></textarea>
 										</div>
 									</div>
-
+									<div class="form-group">
+										<label class="col-sm-2 control-label">最大解析数</label>
+										<div class="col-sm-10">
+											<input type="number" name="allowNum" class="form-control" value="<?php echo config('allowNum')?>">
+											<br><pre>最大解析数是指每个用户最多获取多少个二级域名(设置0为不限制,-1停止用户解析)</pre>
+										</div>
+									</div>
 									<div class="form-group">
 										<label class="col-sm-2 control-label">修改后台密码</label>
 										<div class="col-sm-10">

@@ -6,19 +6,20 @@ if($action=='dnspod'){
 	$DnspodTokenID=getRequest('DnspodTokenID','post');
 	$DnspodToken=getRequest('DnspodToken','post');
 	if(!is_numeric($DnspodTokenID) || $DnspodTokenID<10000){
-		$errorMsg='TokenID格式错误';
+		$showMsg='TokenID格式错误';
 	}elseif(strlen($DnspodToken)!=32) {
-		$errorMsg='Token格式错误';
+		$showMsg='Token格式错误';
 	}else{
 		$dnsApi = new Dnsapi\Dnspod($DnspodTokenID,$DnspodToken);
 		if(!$dnsApi->checkToken()){
-			$errorMsg='Token验证失败，请重新填写';
+			$showMsg='Token验证失败，请重新填写';
 		}else{
 			$stmt = $db->prepare("insert into kldns_configs set `vkey`=:vkey,`value`=:value on duplicate key update `value`=:value");
 			$stmt->execute(array(':vkey'=>'DnspodTokenID',':value'=>$DnspodTokenID));
 			$stmt->execute(array(':vkey'=>'DnspodToken',':value'=>$DnspodToken));
 			config('DnspodTokenID',$DnspodTokenID);
 			config('DnspodToken',$DnspodToken);
+			$showMsg='Dnspod Token验证成功并已成功保存！';
 		}
 	}
 
@@ -26,38 +27,40 @@ if($action=='dnspod'){
 	$AccessKeyId=getRequest('AliyunAccessKeyId','post');
 	$AccessKeySecret=getRequest('AliyunAccessKeySecret','post');
 	if(strlen($AccessKeyId) != 16){
-		$errorMsg='AccessKeyId格式错误';
+		$showMsg='AccessKeyId格式错误';
 	}elseif(strlen($AccessKeySecret)!=30) {
-		$errorMsg='AccessKeySecret格式错误';
+		$showMsg='AccessKeySecret格式错误';
 	}else{
 		$dnsApi = new Dnsapi\Aliyun($AccessKeyId,$AccessKeySecret);
 		if(!$dnsApi->checkToken()){
-			$errorMsg='AccessKey验证失败，请重新填写';
+			$showMsg='AccessKey验证失败，请重新填写';
 		}else{
 			$stmt = $db->prepare("insert into kldns_configs set `vkey`=:vkey,`value`=:value on duplicate key update `value`=:value");
 			$stmt->execute(array(':vkey'=>'AliyunAccessKeyId',':value'=>$AccessKeyId));
 			$stmt->execute(array(':vkey'=>'AliyunAccessKeySecret',':value'=>$AccessKeySecret));
 			config('AliyunAccessKeyId',$AccessKeyId);
 			config('AliyunAccessKeySecret',$AccessKeySecret);
+			$showMsg='Aliyun AccessKey验证成功并已成功保存！';
 		}
 	}
 }elseif($action=='cloudxns'){
 	$CloudXnsApiKey=getRequest('CloudXnsApiKey','post');
 	$CloudXnsSecretKey=getRequest('CloudXnsSecretKey','post');
 	if(strlen($CloudXnsApiKey) != 32){
-		$errorMsg='CloudXnsApiKey格式错误';
+		$showMsg='CloudXnsApiKey格式错误';
 	}elseif(strlen($CloudXnsSecretKey)!=16) {
-		$errorMsg='CloudXnsSecretKey格式错误';
+		$showMsg='CloudXnsSecretKey格式错误';
 	}else{
 		$dnsApi = new Dnsapi\CloudXNS($CloudXnsApiKey,$CloudXnsSecretKey);
 		if(!$dnsApi->checkToken()){
-			$errorMsg='AccessKey验证失败，请重新填写';
+			$showMsg='AccessKey验证失败，请重新填写';
 		}else{
 			$stmt = $db->prepare("insert into kldns_configs set `vkey`=:vkey,`value`=:value on duplicate key update `value`=:value");
 			$stmt->execute(array(':vkey'=>'CloudXnsApiKey',':value'=>$CloudXnsApiKey));
 			$stmt->execute(array(':vkey'=>'CloudXnsSecretKey',':value'=>$CloudXnsSecretKey));
 			config('CloudXnsApiKey',$CloudXnsApiKey);
 			config('CloudXnsSecretKey',$CloudXnsSecretKey);
+			$showMsg='CloudXns AccessKey验证成功并已成功保存！';
 		}
 	}
 }
@@ -72,8 +75,8 @@ require_once('../head.php');
 				<div class="col-xs-12">
 					<div class="panel panel-info">
 						<?php
-						if(isset($errorMsg)){
-							echo '<div class="alert alert-danger text-center" role="alert">'.$errorMsg.'</div>';
+						if(isset($showMsg)){
+							echo '<div class="alert alert-danger text-center" role="alert">'.$showMsg.'</div>';
 						}
 						?>
 						<div class="panel-heading text-center">DnsPod Token配置-[<a href="https://www.dnspod.cn/User/Security" target="_Blank">获取</a>]-[<a href="https://support.dnspod.cn/Kb/showarticle/tsid/227/" target="_Blank">帮助</a>]</div>

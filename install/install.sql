@@ -9,10 +9,12 @@ CREATE TABLE `kldns_configs` (
 INSERT INTO `kldns_configs` VALUES ('webName', '快乐域名分发系统v1.0');
 INSERT INTO `kldns_configs` VALUES ('webFoot', 'PGNlbnRlcj5Qb3dlcmVkIGJ5IEt1YWlMZVNoaUZ1ICE8L2NlbnRlcj4=');
 INSERT INTO `kldns_configs` VALUES ('webAdmin', 'd02af22e9967d381245676709ee08002');
+INSERT INTO `kldns_configs` VALUES ('allowNum', '0');
 
 DROP TABLE IF EXISTS `kldns_domains`;
 CREATE TABLE `kldns_domains` (
   `domain_id` varchar(255) NOT NULL,
+  `allow_uid` int(10) unsigned NOT NULL DEFAULT  '0',
   `dns` varchar(255) CHARACTER SET utf8 DEFAULT NULL,
   `name` varchar(255) CHARACTER SET utf8 NOT NULL,
   `remark` varchar(255) CHARACTER SET utf8 DEFAULT NULL,

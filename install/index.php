@@ -33,7 +33,8 @@ if($action=='install'){
 				if(!is_null(trim($value))){
 					if($db->exec($value)===false){
 						$error++;
-						$errorMsg.=$db->errorInfo()[2]."<br>";
+						$dberror=$db->errorInfo();
+						$errorMsg.=$dberror[2]."<br>";
 					}else{
 						$success++;
 					}

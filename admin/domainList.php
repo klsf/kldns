@@ -54,16 +54,13 @@ require_once('../head.php');
 						<div class="panel-body">
 							<div class="list-group text-success">
 								<div class="list-group-item">[UID]代表指定某个用户能解析此域名，[UID:0]代表所有有均可以解析此域名！</div>
-								<div class="list-group-item"><form action="#" method="post"><input type="hidden" name="action" class="form-control" value="zd">
-								指定域名：<select name="domain_id">
+								<div class="list-group-item"><form method="post" class="form-inline"><input type="hidden" name="action" value="zd"><div class="form-group"><label>&nbsp;指定域名&nbsp;&nbsp;&nbsp;</label><select name="domain_id" class="form-control">
 								<?php
 								foreach ($domainList as $value) {
 									echo '<option value="'.$value['domain_id'].'">'.$value['name'].'</option>';
 								}
 								?>
-								</select> 所属权归 <input type="text" name="uid" placeholder="输入用户UID"> 使用！
-								<input type="submit" value="设定">
-								</form></div>
+								</select></div><div class="form-group"><label>&nbsp;&nbsp;&nbsp;所属权归&nbsp;&nbsp;&nbsp;</label><input type="number" name="uid" size=4 class="form-control" placeholder="输入用户UID">&nbsp;&nbsp;&nbsp;使用！</div><button type="submit" class="btn btn-success">确定</button></form></div>
 								<?php
 								$img['dnspod']='<img src="/assets/images/dnspod.jpg" width=50 height=18>&nbsp;&nbsp;';
 								$img['aliyun']='<img src="/assets/images/aliyun.jpg" width=50 height=18>&nbsp;&nbsp;';

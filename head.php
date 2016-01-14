@@ -6,9 +6,9 @@
 		<meta content="yes" name="apple-mobile-web-app-capable">     
 		<meta content="black" name="apple-mobile-web-app-status-bar-style">
         <title><?php echo $title;?>-<?php echo config('webName');?></title>
-		<script src="http://libs.baidu.com/jquery/2.0.0/jquery.min.js"></script>
-		<script src="http://libs.baidu.com/bootstrap/3.0.3/js/bootstrap.min.js"></script>
-		<link href="http://libs.baidu.com/bootstrap/3.0.3/css/bootstrap.min.css" rel="stylesheet">
+		<script src="http://cdn.bootcss.com/jquery/1.11.3/jquery.min.js"></script>
+		<script src="http://cdn.bootcss.com/bootstrap/3.3.5/js/bootstrap.min.js"></script>
+		<link href="http://cdn.bootcss.com/bootstrap/3.3.5/css/bootstrap.min.css" rel="stylesheet">
 		<link href="/assets/css/style.css" rel="stylesheet">
     </head>
     <body>
