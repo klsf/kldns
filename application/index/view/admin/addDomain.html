@@ -1,0 +1,74 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>添加域名<a href="{:U('domainList')}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="add">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">解析平台</label>
+                            <div class="col-sm-10">
+                                <select name="dns" class="form-control ropdown-toggle" id="dnsSelect">
+                                    <option value ="dnspod">DnsPod</option>
+                                    <option value ="aliyun">AliYun</option>
+                                    <option value ="cloudxns">CloudXNS</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 col-xs-12 control-label">域名</label>
+                            <div class="col-sm-8 col-xs-8">
+                                <select name="domain" class="form-control ropdown-toggle" id="domainSelect"></select>
+                            </div>
+                            <div class="col-sm-2 col-xs-4">
+                                <span class="btn btn-warning" id="reloadBtn">刷新</span>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 col-xs-12 control-label">解析等级</label>
+                            <div class="col-sm-10">
+                                <input type="number" class="form-control" name="level" value="0" required>
+                                <pre>用户等级大于等于解析等级的时候才能解析此域名！0代表所有人都可以解析！</pre>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">确认添加</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="footJs"}
+<script type="text/javascript">
+    function loadScript(c) {
+        var a = document.createElement("script");
+        a.onload = a.onreadystatechange = function() {
+            if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                a.onload = a.onreadystatechange = null;
+                if (a.parentNode) {
+                    a.parentNode.removeChild(a)
+                }
+            }
+        };
+        a.src = c;
+        document.getElementsByTagName("head")[0].appendChild(a)
+    }
+    $(function () {
+        $(document).on("click","#reloadBtn",function(){
+            var dns = $('#dnsSelect').val();
+            var url="{:U('index/Ajax/domainList')}?dns="+dns;
+            loadScript(url);
+        });
+    });
+</script>
+{/block}

@@ -1,0 +1,64 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>个人信息<a href="{:U("index")}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                个人信息
+            </div>
+            <div class="panel-body tab-content">
+                <form class="form-horizontal" action="#" method="post">
+                    <input type="hidden" name="action" value="update">
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">UID</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{$userInfo.uid}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">用户名</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{$userInfo.user}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">邮箱</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{$userInfo.email}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">等级</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{$userInfo.level}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">最大解析条数</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{if condition="$userInfo.max"}{$userInfo.max}{else}{if condition="C('allowNum')"}{if condition="C('allowNum') eq -1"}关闭自助解析{else}{:C('allowNum')}{/if}{else}无限{/if}{/if}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">修改密码</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="pwd" class="form-control" placeholder="留空则不修改密码">
+                        </div>
+                    </div>
+
+
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <button type="submit" class="btn btn-success btn-block">修改信息</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{/block}

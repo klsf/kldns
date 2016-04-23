@@ -1,0 +1,27 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>管理后台</h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading text-center">系统设置</div>
+            <div class="panel-body">
+                <div class="list-group text-center">
+                    <a href="{:U('webSet')}" class="list-group-item">网站配置</a>
+                    <a href="{:U('apiSet')}" class="list-group-item">API配置</a>
+                </div>
+            </div>
+            <div class="panel-heading text-center">数据管理</div>
+            <div class="panel-body">
+                <div class="list-group text-center">
+                    <a href="{:U('userList')}" class="list-group-item">用户列表</a>
+                    <a href="{:U('recordList')}" class="list-group-item">记录列表</a>
+                    <a href="{:U('domainList')}" class="list-group-item">域名列表</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

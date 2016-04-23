@@ -1,0 +1,87 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <div class="panel panel-default">
+            <div class="panel-heading">{:C("webName")}</div>
+        </div>
+    </div>
+    {if condition="C('notice_index')"}
+    <div class="col-xs-12">
+        <div class="panel panel-default">
+            <div class="panel-body">{:C('notice_index')}</div>
+        </div>
+    </div>
+    {/if}
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                <ul class="nav nav-tabs">
+                    <li class="col-xs-6 text-center active"><a href="#login" data-toggle="tab">登录</a></li>
+                    <li class="col-xs-6 text-center"><a href="#register" data-toggle="tab" id="regtab">注册</a></li>
+                </ul>
+            </div>
+            <div class="panel-body tab-content">
+                <div class="tab-pane fade in active" id="login">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="login">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">用户名</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="user" class="form-control" placeholder="输入用户名或者邮箱账号" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">密码</label>
+                            <div class="col-sm-10">
+                                <input type="password" name="pwd" class="form-control" placeholder="输入账号密码" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">立即登录</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="tab-pane fade" id="register">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="reg">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">用户名</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="user" class="form-control" placeholder="最短需要3位" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">密码</label>
+                            <div class="col-sm-10">
+                                <input type="password" name="pwd" class="form-control" placeholder="长度不能低于6" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">邮箱</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="email" class="form-control" placeholder="有效邮箱地址" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">验证码</label>
+                            <label class="col-sm-2 control-label"><img src="/code.php" onclick="this.src='/code.php?'+Math.random();" title="点击更换验证码"></label>
+                            <div class="col-sm-8">
+                                <input type="text" name="code" class="form-control" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">免费注册</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
+{block name="footJs"}{if condition="isset($isReg) && $isReg"}<script type="text/javascript">$("#regtab").click();</script>{/if}{/block}

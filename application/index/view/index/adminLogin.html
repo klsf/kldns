@@ -1,0 +1,29 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>管理后台登录</h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" value="login">
+                        <div class="form-group">
+                            <div class="col-xs-12">
+                                <input type="password" name="pwd" class="form-control" placeholder="管理员密码" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-xs-12">
+                                <button type="submit" class="btn btn-success btn-block">登录</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

@@ -1,0 +1,58 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>网站基本信息设置<a href="{:U('index')}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading text-center">网站设置</div>
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="set">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">网站名称</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="webName" class="form-control" value="{:C('webName')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">全局底部信息</label>
+                            <div class="col-sm-10">
+                                <textarea name="webFoot" class="form-control" rows="5">{:getHtmlCode(C('webFoot'),true)}</textarea>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">最大解析数</label>
+                            <div class="col-sm-10">
+                                <input type="number" name="allowNum" class="form-control" value="{:C('allowNum')}" required>
+                                <br><pre>最大解析数是指每个用户最多获取多少个二级域名(设置0为不限制,-1停止用户解析)</pre>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">禁止解析前缀</label>
+                            <div class="col-sm-10">
+                                <textarea name="forbidRecord" class="form-control" rows="5">{:C('forbidRecord')}</textarea>
+                                <br><pre>禁止用户解析的前缀，多个前缀用,隔开！</pre>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">修改后台密码</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="webAdmin" class="form-control" placeholder="留空则不修改">
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">保存配置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

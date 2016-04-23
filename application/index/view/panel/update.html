@@ -1,0 +1,54 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>修改解析<a href="{:U("index")}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                {$record.name}.{$record.domain}-修改
+            </div>
+            <div class="panel-body tab-content">
+                <form class="form-horizontal" action="#" method="post">
+                    <input type="hidden" name="action" value="update">
+                    <div class="form-group">
+                        <label  class="col-sm-2 control-label">域名</label>
+                        <div class="col-sm-10">
+                            <input type="text" class="form-control" value="{$record.domain}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">记录</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="name" class="form-control" value="{$record.name}" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">类型</label>
+                        <div class="col-sm-10">
+                            <select name="type" class="form-control" size="1">
+                                <option value="A">A记录</option>
+                                <option value="CNAME" {if condition="$record.type eq 'CNAME'"}selected{/if}>CANME记录</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="col-sm-2 control-label">记录值</label>
+                        <div class="col-sm-10">
+                            <input type="text" name="value" class="form-control" value="{$record.value}" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <div class="col-sm-offset-2 col-sm-10">
+                            <button type="submit" class="btn btn-success btn-block">修改记录</button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{/block}

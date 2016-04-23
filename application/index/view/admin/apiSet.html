@@ -1,0 +1,94 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>API配置<a href="{:U('index')}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading text-center">DnsPod Token配置-[<a href="https://www.dnspod.cn/User/Security" target="_Blank">获取</a>]-[<a href="https://support.dnspod.cn/Kb/showarticle/tsid/227/" target="_Blank">帮助</a>]</div>
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="dnspod">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">TokenID</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="DnspodTokenID" class="form-control" placeholder="DnsPod的TokenID" value="{:C('DnspodTokenID')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">TokenID</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="DnspodToken" class="form-control" placeholder="DnsPod的Token" value="{:C('DnspodToken')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">保存配置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-info">
+            <div class="panel-heading text-center">AliYun AccessKey配置-[<a href="https://ak-console.aliyun.com/index#/accesskey" target="_Blank">获取</a>]</div>
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="aliyun">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">AccessKeyId</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="AliyunAccessKeyId" class="form-control" placeholder="AccessKeyId" value="{:C('AliyunAccessKeyId')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">AccessKeySecret</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="AliyunAccessKeySecret" class="form-control" placeholder="AccessKeySecret" value="{:C('AliyunAccessKeySecret')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">保存配置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel panel-info">
+            <div class="panel-heading text-center">CloudXNS API KEY配置-[<a href="https://www.cloudxns.net/AccountManage/apimanage.html" target="_Blank">获取</a>]</div>
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    <form class="form-horizontal" action="#" method="post">
+                        <input type="hidden" name="action" class="form-control" value="cloudxns">
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">API KEY</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="CloudXnsApiKey" class="form-control" placeholder="CloudXNS的API KEY" value="{:C('CloudXnsApiKey')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <label class="col-sm-2 control-label">SECRET KEY</label>
+                            <div class="col-sm-10">
+                                <input type="text" name="CloudXnsSecretKey" class="form-control" placeholder="CloudXNS的SECRET KEY" value="{:C('CloudXnsSecretKey')}" required>
+                            </div>
+                        </div>
+                        <div class="form-group">
+                            <div class="col-sm-offset-2 col-sm-10">
+                                <button type="submit" class="btn btn-success btn-block">保存配置</button>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{/block}

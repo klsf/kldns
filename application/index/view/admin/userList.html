@@ -1,0 +1,82 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>用户列表<a href="{:U('index')}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-body tab-content">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered bootstrap-datatable datatable">
+                        <thead>
+                        <tr>
+                            <th>#UID</th>
+                            <th>用户名</th>
+                            <th>邮箱</th>
+                            <th>等级</th>\
+                            <th>已解析数</th>
+                            <th>最大解析数</th>
+                            <th>注册时间</th>
+                            <th class="text-right">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {volist name="users" id="user"}
+                        <tr id="User_{$user.uid}">
+                            <td>{$user.uid}</td>
+                            <td>{$user.user}</td>
+                            <td>{$user.email}</td>
+                            <td>{$user.level}</td>
+                            <td><a href="{:U('recordList',array('uid'=>$user.uid))}" class="btn-xs btn-block btn-info text-center">{$user.count}</a></td>
+                            <td>{$user.max}</td>
+                            <td>{$user.regtime}</td>
+                            <td align="right">
+                                <a href="{:U('userInfo',array('uid'=>$user.uid))}" target="_blank" class="btn-xs btn-info"><span class="glyphicon glyphicon-eye-open"></span></a>&nbsp;&nbsp;<span class="btn-xs btn-warning delUser" uid="{$user.uid}"><span class="glyphicon glyphicon-trash"></span></span></td></tr>
+                        {/volist}
+                        <td align="center" colspan="8">{$pageList->showPage()}</td>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{/block}
+{block name="footJs"}
+<script type="text/javascript">
+    function loadScript(c) {
+        var a = document.createElement("script");
+        a.onload = a.onreadystatechange = function() {
+            if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                a.onload = a.onreadystatechange = null;
+                if (a.parentNode) {
+                    a.parentNode.removeChild(a)
+                }
+            }
+        };
+        a.src = c;
+        document.getElementsByTagName("head")[0].appendChild(a)
+    }
+    $(function () {
+        //改变域名选择
+        $('#domainSelect').change(function(){
+            var id=$(this).children('option:selected').val();
+            if( id == 0){
+                window.location.href="{:U('recordList')}";
+            }else{
+                window.location.href="?id="+id;
+            }
+
+        });
+        $(document).on("click",".delUser",function(){
+            if(confirm("'删除该用户不会删除解析的记录，确定删除？")) {
+                var uid = $(this).attr('uid');
+                var url = "{:U('index/Ajax/delUser')}?uid=" + uid;
+                loadScript(url);
+            }
+        });
+    });
+</script>
+{/block}

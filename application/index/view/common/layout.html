@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
+    <meta content="yes" name="apple-mobile-web-app-capable">
+    <meta content="black" name="apple-mobile-web-app-status-bar-style">
+    <title>{if condition="isset($webTitle)"}{$webTitle}-{/if}{:C("webName")}</title>
+    <meta name="keywords" content="{:C("webKeywords")}" />
+    <meta name="description" content="{:C("webDescription")}" />
+    <script src="/assets/jquery/jquery-2.2.3.min.js"></script>
+    <script src="/assets/bootstrap-3.3.5/js/bootstrap.min.js"></script>
+    <link href="/assets/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" type="text/css" href="/assets/sweetalert/sweetalert.css"/>
+</head>
+<body>
+<div class="container">
+    {block name="main"}主内容{/block}
+    <footer class="footer text-center">
+	<pre>{:getHtmlCode(C('webFoot'))}</pre>
+    </footer>
+</div>
+<script src="/assets/sweetalert/sweetalert.min.js"></script>
+<script type="text/javascript">{if condition="isset($alert)"}{$alert}{/if}</script>
+{block name="footJs"}{/block}
+</body>
+</html>

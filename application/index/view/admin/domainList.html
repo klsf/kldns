@@ -1,0 +1,35 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>域名列表<a href="{:U('index')}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-success">
+            <div class="panel-heading text-center">域名列表</div>
+            <div class="panel-body">
+                <div class="list-group text-success">
+                    {volist name="domains" id="domain"}
+                    <a href="{:U('recordList')}?id={$domain.domain_id}" class="list-group-item list-group-item-info">
+                        {if condition="$domain.dns eq 'dnspod'"}
+                        <img src="/assets/images/dnspod.jpg" width=50 height=18>
+                        {elseif condition="$domain.dns eq 'aliyun'"}
+                        <img src="/assets/images/aliyun.jpg" width=50 height=18>
+                        {elseif condition="$domain.dns eq 'cloudxns'"}
+                        <img src="/assets/images/cloudxns.jpg" width=50 height=18>
+                        {/if}
+                        &nbsp;&nbsp;{$domain.name}&nbsp;&nbsp;<span class="text-warning">[level:{$domain.level}]</span>
+                        <span class="badge">{$domain.count}</span>
+                    </a>
+                    {/volist}
+                </div>
+            </div>
+            <div class="panel-body">
+                <div class="list-group text-center">
+                    <a href="{:U('addDomain')}" class="list-group-item list-group-item-warning">添加域名</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}

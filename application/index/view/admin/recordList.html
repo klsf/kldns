@@ -1,0 +1,92 @@
+{extend name="common/layout" /}
+{block name="main"}
+<div class="row">
+    <div class="col-xs-12">
+        <pre><h4>{if condition="isset($uid)"}用户UID:{$uid}的{/if}记录列表<a href="{if condition='isset($uid)'}{:U('userList')}{else}{:U('index')}{/if}" class="btn-xs btn-info" style="float: right;">返回</a></h4></pre>
+    </div>
+    <div class="col-xs-12">
+        <div class="panel panel-info">
+            <div class="panel-heading">
+                选择域名:<select class="btn-xs btn-success dropdown-toggle" id="domainSelect">
+                <option value ="0">全部</option>
+                {volist name="domains" id="domain"}
+                <option value ="{$domain.domain_id}"{if condition="isset($domainId) && $domainId eq $domain.domain_id"}selected{/if}>{$domain.name}</option>
+                {/volist}
+                </select>
+                {if condition="isset($domainId)"}
+                <span class="btn-xs btn-danger delDomain" id="{$domainId}" style="float: right;">删除</span>
+                {/if}
+            </div>
+            <div class="panel-body tab-content">
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered bootstrap-datatable datatable">
+                        <thead>
+                        <tr>
+                            <th>#ID</th>
+                            <th>域名</th>
+                            <th>所属用用户</th>
+                            <th>更新时间</th>
+                            <th class="text-right">操作</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        {volist name="records" id="record"}
+                        <tr id="Record_{$record.record_id}">
+                            <td>{$record.record_id}</td>
+                            <td>{$record.name}.{$record.domain_name}</td>
+                            <td>{$record.user} [UID:{$record.uid}]</td>
+                            <td>{$record.updatetime}</td>
+                            <td align="right">
+                                <a href="http://{$record.name}.{$record.domain_name}" target="_blank" class="btn-xs btn-info"><span class="glyphicon glyphicon-eye-open"></span></a>&nbsp;&nbsp;<span class="btn-xs btn-warning delRecord" record_id="{$record.record_id}"><span class="glyphicon glyphicon-trash"></span></span></td></tr>
+                        {/volist}
+                        <td align="center" colspan="5">{$pageList->showPage()}</td>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{/block}
+{block name="footJs"}
+<script type="text/javascript">
+    function loadScript(c) {
+        var a = document.createElement("script");
+        a.onload = a.onreadystatechange = function() {
+            if (!this.readyState || this.readyState === "loaded" || this.readyState === "complete") {
+                a.onload = a.onreadystatechange = null;
+                if (a.parentNode) {
+                    a.parentNode.removeChild(a)
+                }
+            }
+        };
+        a.src = c;
+        document.getElementsByTagName("head")[0].appendChild(a)
+    }
+    $(function () {
+        //改变域名选择
+        $('#domainSelect').change(function(){
+            var id=$(this).children('option:selected').val();
+            if( id == 0){
+                window.location.href="{:U('recordList')}";
+            }else{
+                window.location.href="?id="+id;
+            }
+
+        });
+        $(document).on("click",".delDomain",function(){
+            if(confirm("'删除域名不会删除已解析的记录，确定删除？")) {
+                var id = $(this).attr('id');
+                var url = "{:U('index/Ajax/delDomain')}?id=" + id;
+                loadScript(url);
+            }
+        });
+        $(document).on("click",".delRecord",function(){
+            var record_id=$(this).attr('record_id');
+            var url="{:U('index/Ajax/delRecord')}?type=admin&id="+record_id;
+            loadScript(url);
+        });
+    });
+</script>
+{/block}
