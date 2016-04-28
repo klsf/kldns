@@ -121,7 +121,7 @@ class Aliyun implements DnsApi
         }else{
             $re=array();
             $re['record_id']=$arr['RecordId'];
-            $re['name']=$_domain;
+            $re['name']=$_name;
             return $re;
         }
     }
