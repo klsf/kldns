@@ -1,0 +1,235 @@
+{extend name="index/layout" /}
+{block name="app"}
+<div class="row">
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item active">控制中心</li>
+                <span class="pull-right">
+                    <a class="btn-sm btn-info" data-toggle="modal"
+                       href="#modal-profile" data-backdrop="false"><i class="fa fa-user"></i></a>
+                </span>
+        </ol>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card bg-faded">
+            <div class="card-header">
+                <i class="fa fa-list"></i> 我的解析记录
+                    <span class="pull-right">
+                        <a class="btn-sm btn-success" data-toggle="modal" href="#modal-addRecord" data-backdrop="false"><i
+                                class="fa fa-plus"></i> 添加</a>
+                    </span>
+            </div>
+            <div class="card-block table-responsive">
+                <div class="list-group-item bg-grey" style="overflow: hidden;">
+                    <form id="searchForm" class="form-inline">
+                        <select class="form-control mr-1" v-on:change="getRecordList" :value="s_domain_id"
+                                v-model="s_domain_id">
+                            <option value="0">所有</option>
+                            <option v-for="domain in domainList" :value="domain.domain_id">{{domain.domain}}</option>
+                        </select>
+                        <div class="form-group mr-1">
+                            <input type="text" class="form-control" placeholder="主机记录" v-on:change="getRecordList"
+                                   :value="s_rr" v-model="s_rr">
+                        </div>
+                        <select class="form-control mr-1" v-on:change="getRecordList" :value="s_type"
+                                v-model="s_type">
+                            <option value="0">所有</option>
+                            <option value="A">A</option>
+                            <option value="CNAME">CNAME</option>
+                        </select>
+                        <div class="form-group mr-1">
+                            <input type="text" class="form-control" placeholder="记录值" v-on:change="getRecordList"
+                                   :value="s_value" v-model="s_value">
+                        </div>
+
+                        <a class="btn btn-info" @click="getRecordList"><i class="fa fa-search"></i> 搜索</a>
+                    </form>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>二级域名</th>
+                        <td>方式</td>
+                        <td>记录值</td>
+                        <td>操作</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(record ,index) in recordList">
+                        <th scope="row">{{record.rr}}.{{record.domain}}</th>
+                        <td>{{record.type}}</td>
+                        <td>{{record.value}}</td>
+                        <td>
+                            <div style="width: 180px;margin: 0 auto;">
+                                <a class="btn-sm btn-info" :href="'http://'+record.rr+'.'+record.domain"
+                                   target="_blank">访问</a>
+                                <a class="btn-sm btn-warning" @click="updateRecord(index)" data-toggle="modal"
+                                   href="#modal-updateRecord" data-backdrop="false">修改</a>
+                                <a class="btn-sm btn-danger" @click="delRecord(record.record_id)">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <ul class="pagination" id="pagination" style="margin:  0 auto;"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-addRecord">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('ajax/record',['action'=>'add'])}" method="post" class="recordForm">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加解析记录</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="主机记录" name="rr" datatype="s2-15"
+                                   required>
+                            <select name="domain_id" class="form-control" required>
+                                <option v-for="domain in domainList" :value="domain.domain_id">{{domain.domain}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">方式</span>
+                            <select name="type" class="form-control">
+                                <option value="A">A</option>
+                                <option value="CNAME">CNAME</option>
+                            </select>
+                            <input type="text" class="form-control" placeholder="记录值" name="value" datatype="s2-15"
+                                   errormsg="输入正确的记录值" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">消耗</span>
+                            <input value="{:config('web_record_coin')}" class="form-control" disabled>
+                            <span class="input-group-addon">金币</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">剩余</span>
+                            <input :value="coin" class="form-control" disabled>
+                            <span class="input-group-addon">金币</span>
+                        </div>
+                    </div>
+
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal bg-info" id="modal-updateRecord">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('ajax/record',['action'=>'update'])}" method="post" class="recordForm"
+              id="updateRecordForm">
+            <input type="hidden" name="record_id" :value="recordInfo.record_id">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改解析记录</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="主机记录" :value="recordInfo.rr"
+                                   name="rr" minlength="2" required>
+                            <select name="domain_id" class="form-control" :value="recordInfo.domain_id" disabled>
+                                <option v-for="domain in domainList" :value="domain.domain_id">{{domain.domain}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">方式</span>
+                            <select name="type" class="form-control" :value="recordInfo.type">
+                                <option value="A">A</option>
+                                <option value="CNAME">CNAME</option>
+                            </select>
+                            <input type="text" class="form-control" placeholder="记录值" :value="recordInfo.value"
+                                   name="value" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">修改</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-profile">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('ajax/profile')}" method="post" class="ajaxForm">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">个人用户信息</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">UID</span>
+                            <input class="form-control" value="{$userInfo.uid}" disabled>
+                            <span class="input-group-addon">用户名</span>
+                            <input class="form-control" value="{$userInfo.user}" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">身份组</span>
+                            <input class="form-control" value="{:getUserGroupName($userInfo.group)}组" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">金币</span>
+                            <input class="form-control" :value="coin" id="user_coin" data-coin="{$userInfo.coin}"
+                                   disabled>
+                            <span class="input-group-addon">个</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" placeholder="设置新密码" class="form-control" name="pwd" datatype="s5-15"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" placeholder="重复一次密码" class="form-control" recheck="pwd" datatype="s5-15"
+                               required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{/block}

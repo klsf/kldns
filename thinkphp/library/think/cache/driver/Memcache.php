@@ -2,7 +2,7 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006~2016 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006~2017 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
@@ -11,32 +11,29 @@
 
 namespace think\cache\driver;
 
-use think\Cache;
-use think\Exception;
+use think\cache\Driver;
 
-class Memcache
+class Memcache extends Driver
 {
-    protected $handler = null;
     protected $options = [
         'host'       => '127.0.0.1',
         'port'       => 11211,
         'expire'     => 0,
         'timeout'    => 0, // 超时时间（单位：毫秒）
         'persistent' => true,
-        'length'     => 0,
         'prefix'     => '',
     ];
 
     /**
-     * 架构函数
+     * 构造函数
      * @param array $options 缓存参数
      * @access public
-     * @throws Exception
+     * @throws \BadFunctionCallException
      */
     public function __construct($options = [])
     {
         if (!extension_loaded('memcache')) {
-            throw new Exception('_NOT_SUPPERT_:memcache');
+            throw new \BadFunctionCallException('not support: memcache');
         }
         if (!empty($options)) {
             $this->options = array_merge($this->options, $options);
@@ -58,54 +55,84 @@ class Memcache
     }
 
     /**
+     * 判断缓存
+     * @access public
+     * @param string $name 缓存变量名
+     * @return bool
+     */
+    public function has($name)
+    {
+        $key = $this->getCacheKey($name);
+        return $this->handler->get($key) ? true : false;
+    }
+
+    /**
      * 读取缓存
      * @access public
      * @param string $name 缓存变量名
+     * @param mixed  $default 默认值
      * @return mixed
      */
-    public function get($name)
+    public function get($name, $default = false)
     {
-        Cache::$readTimes++;
-        return $this->handler->get($this->options['prefix'] . $name);
+        $result = $this->handler->get($this->getCacheKey($name));
+        return false !== $result ? $result : $default;
     }
 
     /**
      * 写入缓存
      * @access public
-     * @param string $name 缓存变量名
-     * @param mixed $value  存储数据
-     * @param integer $expire  有效时间（秒）
+     * @param string    $name 缓存变量名
+     * @param mixed     $value  存储数据
+     * @param integer   $expire  有效时间（秒）
      * @return bool
      */
     public function set($name, $value, $expire = null)
     {
-        Cache::$writeTimes++;
         if (is_null($expire)) {
             $expire = $this->options['expire'];
         }
-        $name = $this->options['prefix'] . $name;
-        if ($this->handler->set($name, $value, 0, $expire)) {
-            if ($this->options['length'] > 0) {
-                // 记录缓存队列
-                $queue = $this->handler->get('__info__');
-                if (!$queue) {
-                    $queue = [];
-                }
-                if (false === array_search($name, $queue)) {
-                    array_push($queue, $name);
-                }
-
-                if (count($queue) > $this->options['length']) {
-                    // 出列
-                    $key = array_shift($queue);
-                    // 删除缓存
-                    $this->handler->delete($key);
-                }
-                $this->handler->set('__info__', $queue);
-            }
+        if ($this->tag && !$this->has($name)) {
+            $first = true;
+        }
+        $key = $this->getCacheKey($name);
+        if ($this->handler->set($key, $value, 0, $expire)) {
+            isset($first) && $this->setTagItem($key);
             return true;
         }
         return false;
+    }
+
+    /**
+     * 自增缓存（针对数值缓存）
+     * @access public
+     * @param string    $name 缓存变量名
+     * @param int       $step 步长
+     * @return false|int
+     */
+    public function inc($name, $step = 1)
+    {
+        $key = $this->getCacheKey($name);
+        return $this->handler->increment($key, $step);
+    }
+
+    /**
+     * 自减缓存（针对数值缓存）
+     * @access public
+     * @param string    $name 缓存变量名
+     * @param int       $step 步长
+     * @return false|int
+     */
+    public function dec($name, $step = 1)
+    {
+        $key   = $this->getCacheKey($name);
+        $value = $this->handler->get($key) - $step;
+        $res   = $this->handler->set($key, $value);
+        if (!$res) {
+            return false;
+        } else {
+            return $value;
+        }
     }
 
     /**
@@ -116,19 +143,29 @@ class Memcache
      */
     public function rm($name, $ttl = false)
     {
-        $name = $this->options['prefix'] . $name;
+        $key = $this->getCacheKey($name);
         return false === $ttl ?
-        $this->handler->delete($name) :
-        $this->handler->delete($name, $ttl);
+        $this->handler->delete($key) :
+        $this->handler->delete($key, $ttl);
     }
 
     /**
      * 清除缓存
      * @access public
+     * @param string $tag 标签名
      * @return bool
      */
-    public function clear()
+    public function clear($tag = null)
     {
+        if ($tag) {
+            // 指定标签清除
+            $keys = $this->getTagItem($tag);
+            foreach ($keys as $key) {
+                $this->handler->delete($key);
+            }
+            $this->rm('tag_' . md5($tag));
+            return true;
+        }
         return $this->handler->flush();
     }
 }

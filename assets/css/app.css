@@ -1,0 +1,12 @@
+.error {
+    border: 1px solid #efd989;
+    width: 100%;
+    padding: .5rem .75rem;
+    font-size: 1rem;
+    line-height: 1.25;
+    border-radius: 0px;
+}
+
+td {
+    text-align: center;
+}

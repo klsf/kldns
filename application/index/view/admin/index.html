@@ -1,27 +1,72 @@
-{extend name="common/layout" /}
-{block name="main"}
+{extend name="admin/layout" /}
+{block name="app"}
 <div class="row">
-    <div class="col-xs-12">
-        <pre><h4>管理后台</h4></pre>
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item active">管理后台</li>
+        </ol>
     </div>
-    <div class="col-xs-12">
-        <div class="panel panel-info">
-            <div class="panel-heading text-center">系统设置</div>
-            <div class="panel-body">
-                <div class="list-group text-center">
-                    <a href="{:U('webSet')}" class="list-group-item">网站配置</a>
-                    <a href="{:U('apiSet')}" class="list-group-item">API配置</a>
-                </div>
+</div>
+<div class="row" data-pjax>
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                网站配置
             </div>
-            <div class="panel-heading text-center">数据管理</div>
-            <div class="panel-body">
-                <div class="list-group text-center">
-                    <a href="{:U('userList')}" class="list-group-item">用户列表</a>
-                    <a href="{:U('recordList')}" class="list-group-item">记录列表</a>
-                    <a href="{:U('domainList')}" class="list-group-item">域名列表</a>
-                </div>
+            <div class="card-block">
+                <a href="{:url('config')}" class="list-group-item"><i class="fa fa-edit mr-2"></i>网站设置</a>
+                <a href="{:url('api')}" class="list-group-item"><i class="fa fa-key mr-2"></i>接口配置</a>
+                <a data-toggle="modal" href="#modal-admin" data-backdrop="false" class="list-group-item"><i
+                        class="fa fa-user-circle-o mr-2"></i>修改密码</a>
             </div>
         </div>
+    </div>
+    <div class="col-xl-6">
+        <div class="card">
+            <div class="card-header">
+                数据管理
+            </div>
+            <div class="card-block">
+                <a href="{:url('user_list')}" class="list-group-item"><i class="fa fa-user mr-2"></i>用户列表</a>
+                <a href="{:url('domain_list')}" class="list-group-item"><i class="fa fa-globe mr-2"></i>域名列表</a>
+                <a href="{:url('record_list')}" class="list-group-item"><i class="fa fa-list mr-2"></i>记录列表</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-admin">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('AdminAjax/admin')}" method="post" class="ajaxForm">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改管理员账号</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <input type="text" placeholder="管理员账号" class="form-control" name="user" datatype="s3-15" value="{:config('web_admin')}"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" placeholder="管理员密码" class="form-control" name="pwd" datatype="s5-15"
+                               required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" placeholder="在输入一次管理员密码" class="form-control" recheck="pwd"
+                               datatype="s5-15"
+                               required>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">保存设置</button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 {/block}

@@ -1,28 +1,28 @@
-{extend name="common/layout" /}
-{block name="main"}
+{extend name="index/layout" /}
+{block name="app"}
 <div class="row">
-    <div class="col-xs-12">
-        <pre><h4>管理后台登录</h4></pre>
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item active">管理员登录</li>
+        </ol>
     </div>
-    <div class="col-xs-12">
-        <div class="panel panel-info">
-            <div class="panel-body">
-                <div class="list-group text-success">
-                    <form class="form-horizontal" action="#" method="post">
-                        <input type="hidden" name="action" value="login">
-                        <div class="form-group">
-                            <div class="col-xs-12">
-                                <input type="password" name="pwd" class="form-control" placeholder="管理员密码" required>
-                            </div>
-                        </div>
-                        <div class="form-group">
-                            <div class="col-xs-12">
-                                <button type="submit" class="btn btn-success btn-block">登录</button>
-                            </div>
-                        </div>
-                    </form>
+</div>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="bg-faded p-3 border-top-0">
+            <form action="{:url('ajax/adminLogin')}" method="post" id="adminLoginForm">
+                <div class="form-group">
+                    <input type="text" name="user" placeholder="管理员账号" class="form-control" datatype="s3-15" required>
                 </div>
-            </div>
+                <div class="form-group">
+                    <input type="password" name="pwd" placeholder="管理员密码" class="form-control" datatype="s5-15"
+                           required>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-primary form-control">登录</button>
+                </div>
+            </form>
         </div>
     </div>
 </div>

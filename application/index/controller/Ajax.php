@@ -1,149 +1,241 @@
 <?php
-// +----------------------------------------------------------------------
-// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
-// +----------------------------------------------------------------------
-// | Author: 快乐是福 <815856515@qq.com>
-// +----------------------------------------------------------------------
-// | Date: 2016/4/23
-// +----------------------------------------------------------------------
+/**
+ * Created by PhpStorm.
+ * User: 快乐是福<815856515@qq.com>
+ * Date: 2017/6/1
+ * Time: 13:03
+ */
 
 namespace app\index\controller;
 
 
-use app\util\dnsApi\DnsApi;
-use app\util\dnsApi\KlsfDns;
+use klsf\klsfdns\KlsfDns;
 use think\Cookie;
 
-class Ajax extends Klsf
+class Ajax extends Common
 {
+    private $uid;
+    private $userInfo;
+    private $result = ['code' => -1];
 
-    /**
-     * 删除用户
-     * @param $uid
-     */
-    public function delUser($uid){
-        $this->isAdmin();
-        if($this->pdo->execute("delete from pre_users where uid=:uid limit 1",array(":uid"=>$uid))){
-            $this->remove("#User_".$uid);
-        }else{
-            $this->alert(sweetAlert("温馨提示","删除用户失败！","warning"));
-        }
-    }
-
-    /**
-     * 从数据库删除域名
-     * @param $id
-     */
-    public function delDomain($id)
+    public function profile()
     {
-        $this->isAdmin();
-        if($this->pdo->execute("delete from pre_domains where domain_id=:id limit 1",array(":id"=>$id))){
-            $this->alert(sweetAlert("删除成功","域名删除成功！","success",U("index/Admin/domainList")));
-        }else{
-            $this->alert(sweetAlert("温馨提示","删除域名失败！","warning"));
+        $this->checkLogin();
+        $pwd = input('post.pwd');
+        if (strlen($pwd) < 5) {
+            $this->result['message'] = '密码太简单';
+        } elseif (db('users')->where('uid', $this->uid)->update(['pwd' => passwordEncrypt($pwd), 'sid' => createSid()])) {
+            $this->result['code'] = 0;
+            $this->result['message'] = '修改密码成功';
+        } else {
+            $this->result['message'] = '修改密码失败';
         }
+        return $this->result;
     }
-    /**
-     * 获取域名列表
-     * @param $dns
-     */
-    public function domainList($dns){
-        $this->isAdmin();
-        if (!in_array($dns,array("dnspod","aliyun","cloudxns"))){
-            $this->alert(sweetAlert("温馨提示","解析平台不存在！","warning"));
-        }
-        $klsfDns = KlsfDns::getApi($dns);
-        if($domains = $klsfDns->getDomainList()){
-            $list=array();
-            foreach ($domains as $value) {
-                $list["{$value['id']}"]=$value['name'];
-            }
-            //过滤已经添加的域名
-            $stmt = $this->pdo->getStmt("select domain_id as id from `pre_domains` where dns=:dns",array(":dns"=>$dns));
-            while($row = $stmt->fetch()){
-                if(isset($list["{$row['id']}"])){
-                    unset($list["{$row['id']}"]);
+
+    public function record()
+    {
+        $this->checkLogin();
+        $action = input('action');
+        $rr = strtolower(input('post.rr'));
+        $type = input('post.type');
+        $value = strtolower(input('post.value'));
+        if ($action == 'add') {
+            $domain_id = input('post.domain_id');
+            if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
+                $this->result['message'] = '主机记录格式不正确';
+            } elseif (strlen($value) < 5) {
+                $this->result['message'] = '记录值不正确';
+            } elseif (!in_array($type, array('A', 'CNAME'))) {
+                $this->result['message'] = '解析类型不存在';
+            } elseif ($this->userInfo['coin'] < config('web_record_coin')) {
+                $this->result['message'] = '账户金币不足';
+            } elseif (db('records')->where('rr', $rr)->where('domain_id', $domain_id)->find()) {
+                $this->result['message'] = '此记录已存在，或被其他用户解析';
+            } elseif (!$domain = db('domains')->where('domain_id', $domain_id)->where('power & ' . $this->userInfo['group'])->find()) {
+                $this->result['message'] = '域名不存在';
+            } else {
+                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
+                if ($ret = $dns->addDomainRecord($rr, $type, $value, $domain['domain_id'], $domain['domain'])) {
+                    if (updateCoin($this->uid, 0 - config('web_record_coin'), "添加记录[{$rr}.{$domain['domain']}]")) {
+                        $data = [
+                            'uid' => $this->uid,
+                            'record_id' => $ret['RecordId'],
+                            'domain_id' => $domain_id,
+                            'rr' => $rr,
+                            'type' => $type,
+                            'value' => $value,
+                            'add_time' => date("Y-m-d H:i:s")
+                        ];
+                        if (db('records')->insert($data)) {
+                            $this->result['code'] = 0;
+                            $this->result['message'] = '添加成功';
+                        } else {
+                            $this->result['message'] = '保存进数据库失败';
+                        }
+                    } else {
+                        $this->result['message'] = '账户金币不足';
+                    }
+                } else {
+                    $this->result['message'] = $dns->errorInfo()['message'];
                 }
             }
-            echo'$("#domainSelect").empty();';//清空select选项
-            if(empty($list)){
-                $this->alert(sweetAlert("温馨提示","没有可添加的域名！","warning"));
+        } elseif ($action == 'update') {
+            $record_id = input('post.record_id');
+            if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
+                $this->result['message'] = '主机记录格式不正确';
+            } elseif (strlen($value) < 5) {
+                $this->result['message'] = '记录值不正确';
+            } elseif (!in_array($type, array('A', 'CNAME'))) {
+                $this->result['message'] = '解析类型不存在';
+            } elseif (!$domain = db("records")->alias('a')->field('b.*')->join('domains b', 'b.domain_id = a.domain_id and b.power&' . $this->userInfo['group'])->where('a.uid', $this->uid)->where('a.record_id', $record_id)->find()) {
+                $this->result['message'] = '记录不存在';
+            } elseif (!$domain['dns']) {
+                $this->result['message'] = '域名不存在';
+            } else {
+                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
+                if ($ret = $dns->updateDomainRecord($record_id, $rr, $type, $value, $domain['domain_id'], $domain['domain'])) {
+                    $data = [
+                        'rr' => $rr,
+                        'type' => $type,
+                        'value' => $value
+                    ];
+                    if (db('records')->where('record_id', $record_id)->update($data)) {
+                        $this->result['code'] = 0;
+                        $this->result['message'] = '修改成功';
+                    } else {
+                        $this->result['message'] = '保存进数据库失败';
+                    }
+                } else {
+                    $this->result['message'] = $dns->errorInfo()['message'];
+                }
             }
-            foreach ($list as $key => $value) {
-                echo'$("#domainSelect").append("<option value=\''.$value.'\'>'.$value.'</option>");';
+        } elseif ($action == 'del') {
+            $record_id = input('post.record_id');
+            if (!$domain = db("records")->alias('a')->field('b.*')->join('domains b', 'b.domain_id = a.domain_id ')->where('a.uid', $this->uid)->where('a.record_id', $record_id)->find()) {
+                $this->result['message'] = '记录不存在';
+            } elseif (db('records')->where('record_id', $record_id)->delete()) {
+                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
+                $dns->deleteDomainRecord($record_id, $domain['domain_id'], $domain['domain']);
+                $this->result['code'] = 0;
+                $this->result['message'] = '删除成功';
+            } else {
+                $this->result['message'] = '删除失败';
             }
-            exit();
-        }else{
-            $this->alert(sweetAlert("温馨提示","获取域名列表失败，请先确定API配置正确！","warning"));
+        } elseif ($action == 'list') {
+            $page = input('post.page/d');
+            $page = ($page < 1) ? 1 : $page;
+            $this->result['code'] = 0;
+            $this->result['message'] = '获取成功';
+
+            $domain_id = input('domain_id');
+            $rr = input('post.rr');
+            $type = input('post.type');
+            $value = input('post.value');
+            $query = db("records")->alias('a');
+            if ($domain_id) {
+                $query->where('a.domain_id', $domain_id)->where('a.uid', $this->uid);
+            }
+            if ($rr) {
+                $query->where('a.rr', $rr);
+            }
+            if ($type) {
+                $query->where('a.type', $type);
+            }
+            if ($value) {
+                $query->where('a.value', $value);
+            }
+            $query2 = clone $query;
+            $total = $query->field('a.*,b.domain')->join('domains b', 'b.domain_id = a.domain_id')->count('a.record_id');
+            $this->result['page'] = $page;
+            $this->result['totalPage'] = ceil(($total + 0.1) / 10);
+            $this->result['list'] = $query2->field('a.*,b.domain')->join('domains b', 'b.domain_id = a.domain_id')->order('add_time desc')->page($page, 10)->select();
+        } else {
+            $this->result['message'] = '操作不存在';
+        }
+
+        return $this->result;
+    }
+
+
+    public function domainList()
+    {
+        $this->checkLogin();
+        return db("domains")->field('domain_id,domain')->where('power & ' . $this->userInfo['group'])->order('add_time desc')->limit(0, 5)->select();
+    }
+
+    public function adminLogin()
+    {
+        $user = input('post.user');
+        $pwd = input('post.pwd');
+        if ($user === config('web_admin') && passwordEncrypt($pwd) === config('web_password')) {
+            $sid = passwordEncrypt($user . ',' . passwordEncrypt($pwd));
+            Cookie::set("adminSid", $sid);
+            $this->result['code'] = 0;
+            $this->result['message'] = '登录成功';
+        } else {
+            $this->result['message'] = '管理员账号或者密码错误';
+        }
+        return $this->result;
+    }
+
+    public function login()
+    {
+        if ($userRow = db("users")->field('uid,user')->where('user', input('post.user'))->where('pwd', passwordEncrypt(input('post.pwd')))->find()) {
+            $sid = createSid();
+            Cookie::set("userSid", $sid);
+            db("users")->where('uid', $userRow['uid'])->update(['sid' => $sid]);
+            $this->result['code'] = 0;
+            $this->result['message'] = '登录成功';
+            $this->result['info'] = $userRow;
+        } else {
+            $this->result['message'] = '账号或者密码错误';
+        }
+        return $this->result;
+    }
+
+    public function reg()
+    {
+        $user = input("post.user");
+        $pwd = input("post.pwd");
+        $code = input('post.code');
+        @session_start();
+        if (!preg_match('/^[a-zA-Z0-9]{5,16}$/', $user)) {
+            $this->result['message'] = '用户名只能包含数字和字母，长度5-16';
+        } elseif (strlen($pwd) < 6) {
+            $this->result['message'] = '密码太简单';
+        } elseif (!isset($_SESSION['vc_code']) || $code !== $_SESSION['vc_code']) {
+            $this->result['message'] = '验证码不正确';
+        } elseif (db('users')->where('user', $user)->find()) {
+            $this->result['message'] = '此用户已被注册';
+        } elseif (db("users")->insert(['user' => $user, 'pwd' => passwordEncrypt($pwd), 'sid' => createSid(), 'add_time' => date("Y-m-d H:i:s"), 'coin' => intval(config('web_reg_coin'))])) {
+            unset($_SESSION['vc_code']);//销毁验证码
+            $this->result['code'] = 0;
+            $this->result['message'] = '注册成功';
+        } else {
+            $this->result['message'] = '保存数据库失败';
+        }
+        return $this->result;
+    }
+
+    private function getUserInfo()
+    {
+        if (!$this->uid) {
+            if ($sid = Cookie::get("userSid")) {
+                if ($info = db('users')->where('sid', $sid)->find()) {
+                    $this->userInfo = $info;
+                    $this->uid = $this->userInfo['uid'];
+                }
+            }
         }
     }
 
-    /**
-     * 删除记录
-     * @param        $id
-     * @param string $type
-     */
-    public function delRecord($id,$type = "user")
+    private function checkLogin()
     {
-        if($type == "user"){//用户删除
-            $this->isLogin();
-            if (!$record = $this->pdo->find("select a.domain_id,b.dns from `pre_records`as a left join `pre_domains` as b on b.domain_id=a.domain_id WHERE a.`uid`=:uid and a.record_id=:id limit 1",array(":uid"=>$this->userInfo['uid'],":id"=>$id))){
-                $this->alert(sweetAlert("删除失败","此记录不存在！","warning"));
-            }
-        }else{//管理员删除
-            $this->isAdmin();
-            if (!$record = $this->pdo->find("select a.domain_id,b.dns from `pre_records`as a left join `pre_domains` as b on b.domain_id=a.domain_id WHERE a.record_id=:id limit 1",array(":id"=>$id))){
-                $this->alert(sweetAlert("删除失败","此记录不存在！","warning"));
-            }
-        }
-
-        $domain_id = $record['domain_id'];
-        $klsfDns = KlsfDns::getApi($record['dns']);
-        if ($klsfDns->delRecord($domain_id,$id)){
-            if($type == "user"){//用户删除
-                $this->pdo->execute("delete from pre_records where record_id=:id and uid=:uid limit 1",array(":uid"=>$this->userInfo['uid'],":id"=>$id));
-            }else{//管理员删除
-                $this->pdo->execute("delete from pre_records where record_id=:id limit 1",array(":id"=>$id));
-            }
-            $this->remove('#Record_'.$id);
-        }else{
-            $info = $klsfDns->getErrorInfo();
-            $this->alert(sweetAlert("删除失败",$info['msg'],"warning"));
-        }
-
-    }
-
-    /**
-     * 弹出警告
-     * @param $_msg
-     */
-    private function alert($_msg)
-    {
-        exit($_msg);
-    }
-
-    /**
-     * 移除某个元素
-     * @param $_id
-     */
-    private function remove($_id)
-    {
-        exit("$('{$_id}').remove();");
-    }
-    /**
-     * 判断是否是管理员
-     */
-    protected function isAdmin()
-    {
-        $webAdmin = Cookie::get("webAdmin");
-        if(empty($webAdmin) || $webAdmin !== C("webAdmin")){
-            $this->alert(sweetAlert("无权限","请先登录管理员账号！","warning"));
-        }
-    }
-    protected function isLogin()
-    {
-        if(empty($this->userInfo)){
-            $this->alert(sweetAlert("未登录","请登陆后操作！","warning"));
+        $this->getUserInfo();
+        if (!$this->userInfo) {
+            $this->result['message'] = '请先登录！';
+            return $this->result;
         }
     }
 

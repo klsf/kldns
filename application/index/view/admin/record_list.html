@@ -1,0 +1,112 @@
+{extend name="admin/layout" /}
+{block name="app"}
+<div class="row">
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item"><a href="{:url('index')}" data-pjax="true">管理后台</a></li>
+            <li class="breadcrumb-item active">记录列表</li>
+        </ol>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card bg-faded">
+            <div class="card-header">
+                <i class="fa fa-list"></i> 解析记录列表
+            </div>
+            <div class="card-block table-responsive">
+                <div class="list-group-item bg-grey" style="overflow: hidden;">
+                    <form id="searchForm" class="form-inline">
+                        <select class="form-control mr-1" v-on:change="getRecordList" :value="s_domain_id"
+                                v-model="s_domain_id">
+                            <option value="0">所有</option>
+                            <option v-for="domain in domainList" :value="domain.domain_id">{{domain.domain}}</option>
+                        </select>
+                        <div class="form-group mr-1">
+                            <input type="number" class="form-control" placeholder="用户UID" v-on:change="getRecordList"
+                                   :value="s_uid" v-model="s_uid">
+                        </div>
+
+                        <a class="btn btn-info" @click="getRecordList"><i class="fa fa-search"></i> 搜索</a>
+                    </form>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>二级域名</th>
+                        <td>所属用户</td>
+                        <td>方式</td>
+                        <td>记录值</td>
+                        <td>添加时间</td>
+                        <td>操作</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(record ,index) in recordList">
+                        <th scope="row">{{record.rr}}.{{record.domain}}</th>
+                        <td><a :href="'{:url('user_list')}?uid='+record.uid">{{record.user}}[UID:{{record.uid}}]</a></td>
+                        <td>{{record.type}}</td>
+                        <td>{{record.value}}</td>
+                        <td>{{record.add_time}}</td>
+                        <td>
+                            <div style="width: 180px;margin: 0 auto;">
+                                <a class="btn-sm btn-info" :href="'http://'+record.rr+'.'+record.domain"
+                                   target="_blank">访问</a>
+                                <a class="btn-sm btn-warning" @click="updateRecord(index)" data-toggle="modal"
+                                   href="#modal-updateRecord" data-backdrop="false">修改</a>
+                                <a class="btn-sm btn-danger" @click="delRecord(record.record_id)">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <ul class="pagination" id="pagination" style="margin:  0 auto;"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-updateRecord">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('AdminAjax/record',['action'=>'update'])}" method="post" class="recordForm"
+              id="updateRecordForm">
+            <input type="hidden" name="record_id" :value="recordInfo.record_id">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改解析记录</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <input type="text" class="form-control" placeholder="主机记录" :value="recordInfo.rr"
+                                   name="rr" minlength="2" required>
+                            <span class="input-group-addon">{{recordInfo.domain}}</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">方式</span>
+                            <select name="type" class="form-control" :value="recordInfo.type">
+                                <option value="A">A</option>
+                                <option value="CNAME">CNAME</option>
+                            </select>
+                            <input type="text" class="form-control" placeholder="记录值" :value="recordInfo.value"
+                                   name="value" required>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">修改</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{/block}

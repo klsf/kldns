@@ -1,0 +1,225 @@
+{extend name="admin/layout" /}
+{block name="app"}
+<div class="row">
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item"><a href="{:url('index')}" data-pjax="true">管理后台</a></li>
+            <li class="breadcrumb-item active">域名列表</li>
+        </ol>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card bg-faded">
+            <div class="card-header">
+                <i class="fa fa-list"></i> 域名列表
+                    <span class="pull-right">
+                        <a class="btn-sm btn-success" data-toggle="modal" href="#modal-addDomain" data-backdrop="false"><i
+                                class="fa fa-plus"></i> 添加</a>
+                    </span>
+            </div>
+            <div class="card-block table-responsive">
+                <div class="list-group-item bg-grey" style="overflow: hidden;">
+                    <form id="searchForm" class="form-inline">
+                        <select class="form-control mr-1" v-on:change="getDomainList" :value="s_dns" v-model="s_dns">
+                            <option value="0">所有</option>
+                            <option value="dnspod">dnspod</option>
+                            <option value="aliyun">aliyun</option>
+                            <option value="cloudxns">cloudxns</option>
+                            <option value="dnscom">dnscom</option>
+                        </select>
+                        <div class="form-group mr-1">
+                            <input type="text" class="form-control" placeholder="输入域名" v-on:change="getDomainList"
+                                   :value="s_domain" v-model="s_domain">
+                        </div>
+                        <a class="btn btn-info" @click="getDomainList"><i class="fa fa-search"></i> 搜索</a>
+                    </form>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>域名</th>
+                        <td>平台</td>
+                        <td>权限</td>
+                        <td>解析量</td>
+                        <td>操作</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(domain ,index) in domainList">
+                        <th scope="row">{{domain.domain}}</th>
+                        <td><img :src="'/assets/images/'+domain.dns+'.png'" width="60" height="20"></td>
+                        <td v-html="power(domain.power)"></td>
+                        <td><a :href="'{:url('record_list')}?domain_id='+domain.domain_id"
+                               data-pjax="">{{domain.total}}</a></td>
+                        <td>
+                            <div style="width: 120px;margin: 0 auto;">
+                                <a class="btn-sm btn-warning" @click="updateDomain(index)" data-toggle="modal"
+                                   href="#modal-updateDomain" data-backdrop="false">修改</a>
+                                <a class="btn-sm btn-danger" @click="delDomain(domain.domain_id)">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <ul class="pagination" id="pagination" style="margin:  0 auto;"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-addDomain">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('AdminAjax/domain',['action'=>'add'])}" method="post" class="domainForm" id="addDomainForm">
+            <input type="hidden" name="domain" :value="selectDomain">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">添加域名-[<a href="{:url('api')}" data-pjax="">接口配置</a>]</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">平台</span>
+                            <select name="dns" class="form-control">
+                                {if condition="config('web_api_dnspod')"}
+                                <option value="dnspod">dnspod</option>
+                                {/if}
+                                {if condition="config('web_api_aliyun')"}
+                                <option value="aliyun">aliyun</option>
+                                {/if}
+                                {if condition="config('web_api_cloudxns')"}
+                                <option value="cloudxns">cloudxns</option>
+                                {/if}
+                                {if condition="config('web_api_dnscom')"}
+                                <option value="dnscom">dnscom</option>
+                                {/if}
+                            </select>
+                            <a href="#" class="input-group-addon" @click="getApiDomainList">获取</a>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">域名</span>
+                            <select name="domain_id" class="form-control" v-on:change="select()" required>
+                                <option v-for="domain in apiDomainList" :value="domain.DomainId">{{domain.DomainName}}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="1" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description">普通</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="2" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #FFD700">金</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="4" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #ceb086">木</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="8" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #46bce0">水</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="16" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #d81111">火</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="32" class="custom-control-input" checked>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #fc6501">土</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">添加</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="modal bg-info" id="modal-updateDomain">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('AdminAjax/domain',['action'=>'update'])}" method="post" class="domainForm">
+            <input type="hidden" name="domain_id" :value="domainInfo.domain_id">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改域名权限</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="1" class="custom-control-input" checked
+                                       v-if="1&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="1" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description">普通</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="2" class="custom-control-input" checked
+                                       v-if="2&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="2" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #FFD700">金</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="4" class="custom-control-input" checked
+                                       v-if="4&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="4" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #ceb086">木</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="8" class="custom-control-input" checked
+                                       v-if="8&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="8" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #46bce0">水</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="16" class="custom-control-input" checked
+                                       v-if="16&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="16" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #d81111">火</span>
+                            </label>
+                            <label class="custom-control custom-checkbox">
+                                <input type="checkbox" name="power[]" value="32" class="custom-control-input" checked
+                                       v-if="32&domainInfo.power">
+                                <input type="checkbox" name="power[]" value="32" class="custom-control-input" v-else>
+                                <span class="custom-control-indicator"></span>
+                                <span class="custom-control-description" style="color: #fc6501">土</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">修改</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{/block}

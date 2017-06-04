@@ -2,7 +2,7 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006~2016 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006~2017 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
@@ -11,1210 +11,1190 @@
 
 namespace think;
 
-class Model
+use InvalidArgumentException;
+use think\db\Query;
+use think\Exception\ValidateException;
+use think\model\Collection as ModelCollection;
+use think\model\Relation;
+use think\model\relation\BelongsTo;
+use think\model\relation\BelongsToMany;
+use think\model\relation\HasMany;
+use think\model\relation\HasManyThrough;
+use think\model\relation\HasOne;
+use think\model\relation\MorphMany;
+use think\model\relation\MorphTo;
+
+/**
+ * Class Model
+ * @package think
+ * @mixin Query
+ */
+abstract class Model implements \JsonSerializable, \ArrayAccess
 {
-    // 操作状态
-    const MODEL_INSERT    = 1; //  新增
-    const MODEL_UPDATE    = 2; //  更新
-    const MODEL_BOTH      = 3; //  全部
-    const EXISTS_VALIDATE = 0; // 存在就验证
-    const MUST_VALIDATE   = 1; // 必须验证
-    const VALUE_VALIDATE  = 2; // 有值就验证
-    // 当前数据库操作对象
-    protected $db = null;
     // 数据库对象池
-    private $links = [];
-    // 主键名称
-    protected $pk = null;
-    // 数据表前缀
-    protected $tablePrefix = null;
-    // 模型名称
-    protected $name = '';
-    // 数据库名称
-    protected $dbName = '';
-    // 数据表字段大小写
-    protected $attrCase = null;
-    //数据库配置
+    protected static $links = [];
+    // 数据库配置
     protected $connection = [];
-    // 数据表名（不包含表前缀）
-    protected $tableName = '';
-    // 实际数据表名（包含表前缀）
-    protected $trueTableName = '';
-    // 最近错误信息
-    protected $error = '';
-    // 字段信息
-    protected $fields = [];
+    // 数据库查询对象
+    protected $query;
+    // 当前模型名称
+    protected $name;
+    // 数据表名称
+    protected $table;
+    // 当前类名称
+    protected $class;
+    // 回调事件
+    private static $event = [];
+    // 错误信息
+    protected $error;
+    // 字段验证规则
+    protected $validate;
+    // 数据表主键 复合主键使用数组定义 不设置则自动获取
+    protected $pk;
+    // 数据表字段信息 留空则自动获取
+    protected $field = [];
+    // 只读字段
+    protected $readonly = [];
+    // 显示属性
+    protected $visible = [];
+    // 隐藏属性
+    protected $hidden = [];
+    // 追加属性
+    protected $append = [];
     // 数据信息
     protected $data = [];
-    // 数据副本
-    protected $duplicate = [];
-    // 查询表达式参数
-    protected $options = [];
-    // 命名范围定义
-    protected $scope = [];
-    // 字段映射定义
-    protected $map = [];
-    // 字段验证规则定义
-    protected $rule = [];
+    // 记录改变字段
+    protected $change = [];
+
+    // 保存自动完成列表
+    protected $auto = [];
+    // 新增自动完成列表
+    protected $insert = [];
+    // 更新自动完成列表
+    protected $update = [];
+    // 是否需要自动写入时间戳 如果设置为字符串 则表示时间字段的类型
+    protected $autoWriteTimestamp;
+    // 创建时间字段
+    protected $createTime = 'create_time';
+    // 更新时间字段
+    protected $updateTime = 'update_time';
+    // 时间字段取出后的默认时间格式
+    protected $dateFormat;
+    // 字段类型或者格式转换
+    protected $type = [];
+    // 是否为更新数据
+    protected $isUpdate = false;
+    // 更新条件
+    protected $updateWhere;
+    // 当前执行的关联对象
+    protected $relation;
+    // 验证失败是否抛出异常
+    protected $failException = false;
+    // 全局查询范围
+    protected $useGlobalScope = true;
+    // 是否采用批量验证
+    protected $batchValidate = false;
+    // 查询数据集对象
+    protected $resultSetType;
+    // 关联自动写入
+    protected $relationWrite;
+    //
+    protected static $db;
 
     /**
-     * 架构函数
-     * @access public
-     * @param string $name 模型名称
-     * @param array $config 模型配置
+     * 初始化过的模型.
+     *
+     * @var array
      */
-    public function __construct($name = '', array $config = [])
-    {
-        // 模型初始化
-        $this->_initialize();
-        // 传入模型参数
-        if (!empty($name)) {
-            $this->name = $name;
-        } elseif (empty($this->name)) {
-            $this->name = $this->getModelName();
-        }
-        if (strpos($this->name, '.')) {
-            // 支持 数据库名.模型名的 定义
-            list($this->dbName, $this->name) = explode('.', $this->name);
-        }
-
-        if (!empty($config['prefix'])) {
-            $this->tablePrefix = $config['prefix'];
-        } elseif (isset($config['prefix']) && '' === $config['prefix']) {
-            $this->tablePrefix = '';
-        } elseif (is_null($this->tablePrefix)) {
-            $this->tablePrefix = Config::get('database.prefix');
-        }
-        if (!empty($config['connection'])) {
-            $this->connection = $config['connection'];
-        }
-        if (!empty($config['table_name'])) {
-            $this->tableName = $config['table_name'];
-        }
-        if (!empty($config['true_table_name'])) {
-            $this->trueTableName = $config['true_table_name'];
-        }
-        if (!empty($config['db_name'])) {
-            $this->dbName = $config['db_name'];
-        }
-
-        if (is_null($this->attrCase)) {
-            $this->attrCase = Config::get('db_attr_case');
-        }
-
-        // 数据库初始化操作
-        // 获取数据库操作对象
-        // 当前模型有独立的数据库连接信息
-        $this->db(0, $this->connection);
-    }
+    protected static $initialized = [];
 
     /**
-     * 设置数据对象的值
+     * 构造方法
      * @access public
-     * @param string $name 名称
-     * @param mixed $value 值
-     * @return void
+     * @param array|object $data 数据
      */
-    public function __set($name, $value)
+    public function __construct($data = [])
     {
-        // 设置数据对象属性
-        $this->data[$name] = $value;
-    }
-
-    /**
-     * 获取数据对象的值
-     * @access public
-     * @param string $name 名称
-     * @return mixed
-     */
-    public function __get($name)
-    {
-        return isset($this->data[$name]) ? $this->data[$name] : null;
-    }
-
-    /**
-     * 检测数据对象的值
-     * @access public
-     * @param string $name 名称
-     * @return boolean
-     */
-    public function __isset($name)
-    {
-        return isset($this->data[$name]);
-    }
-
-    /**
-     * 销毁数据对象的值
-     * @access public
-     * @param string $name 名称
-     * @return void
-     */
-    public function __unset($name)
-    {
-        unset($this->data[$name]);
-    }
-
-    /**
-     * 利用__call方法实现一些特殊的Model方法
-     * @access public
-     * @param string $method 方法名称
-     * @param array $args 调用参数
-     * @return mixed
-     * @throws \think\Exception
-     */
-    public function __call($method, $args)
-    {
-        if (in_array(strtolower($method), ['count', 'sum', 'min', 'max', 'avg'], true)) {
-            // 统计查询的实现
-            $field = isset($args[0]) ? $args[0] : '*';
-            return $this->getField(strtoupper($method) . '(' . $field . ') AS tp_' . $method);
-        } elseif (strtolower(substr($method, 0, 5)) == 'getby') {
-            // 根据某个字段获取记录
-            $field         = Loader::parseName(substr($method, 5));
-            $where[$field] = $args[0];
-            return $this->where($where)->find();
-        } elseif (strtolower(substr($method, 0, 10)) == 'getfieldby') {
-            // 根据某个字段获取记录的某个值
-            $name         = Loader::parseName(substr($method, 10));
-            $where[$name] = $args[0];
-            return $this->where($where)->getField($args[1]);
-        } elseif (isset($this->scope[$method])) {
-            // 命名范围的单独调用支持
-            return $this->scope($method, $args[0]);
+        if (is_object($data)) {
+            $this->data = get_object_vars($data);
         } else {
-            throw new Exception(__CLASS__ . ':' . $method . ' method not exist');
+            $this->data = $data;
         }
+
+        // 当前类名
+        $this->class = get_class($this);
+
+        if (empty($this->name)) {
+            // 当前模型名
+            $name       = str_replace('\\', '/', $this->class);
+            $this->name = basename($name);
+            if (Config::get('class_suffix')) {
+                $suffix     = basename(dirname($name));
+                $this->name = substr($this->name, 0, -strlen($suffix));
+            }
+        }
+
+        if (is_null($this->autoWriteTimestamp)) {
+            // 自动写入时间戳
+            $this->autoWriteTimestamp = $this->db(false)->getConfig('auto_timestamp');
+        }
+
+        if (is_null($this->dateFormat)) {
+            // 设置时间戳格式
+            $this->dateFormat = $this->db(false)->getConfig('datetime_format');
+        }
+
+        if (is_null($this->resultSetType)) {
+            $this->resultSetType = $this->db(false)->getConfig('resultset_type');
+        }
+        // 执行初始化操作
+        $this->initialize();
     }
 
-    // 回调方法 初始化模型
-    protected function _initialize()
-    {}
-
     /**
-     * 对写入到数据库的数据进行处理
-     * @access protected
-     * @param mixed $data 要操作的数据
-     * @param string $type insert 或者 update
-     * @return array
-     * @throws \think\Exception
-     */
-    protected function _write_data($data, $type)
-    {
-        if (empty($data)) {
-            if (!empty($this->data)) {
-                // 没有传递数据，获取当前数据对象的值
-                $data = $this->data;
-                // 重置数据
-                $this->data = [];
-            } else {
-                throw new Exception('invalid data');
-            }
-        }
-        if (!empty($this->duplicate) && 'update' == $type) {
-            // 存在数据副本
-            foreach ($data as $key => $val) {
-                // 去除相同数据
-                if (isset($this->duplicate[$key]) && $val == $this->duplicate[$key]) {
-                    unset($data[$key]);
-                }
-            }
-            if (empty($data)) {
-                // 没有数据变化
-                return [];
-            } else {
-                // 更新操作保留主键信息
-                $pk = $this->getPk();
-                if (is_array($pk)) {
-                    foreach ($pk as $key) {
-                        if (isset($this->duplicate[$key])) {
-                            $data[$key] = $this->duplicate[$key];
-                        }
-                    }
-                } elseif (isset($this->duplicate[$pk])) {
-                    $data[$pk] = $this->duplicate[$pk];
-                }
-            }
-            // 重置副本
-            $this->duplicate = [];
-        }
-        // 检查字段映射
-        if (!empty($this->map)) {
-            foreach ($this->map as $key => $val) {
-                if (isset($data[$key])) {
-                    $data[$val] = $data[$key];
-                    unset($data[$key]);
-                }
-            }
-        }
-
-        // 数据自动验证
-        if (!$this->dataValidate($data)) {
-            return false;
-        }
-
-        // 数据自动填充
-        $this->dataFill($data);
-
-        $fields = $this->getFields();
-        // 检查非数据字段
-        if (!empty($fields)) {
-            foreach ($data as $key => $val) {
-                if (!in_array($key, $fields, true)) {
-                    if (Config::get('db_fields_strict')) {
-                        throw new Exception(' fields not exists :[ ' . $key . ' ]');
-                    }
-                    unset($data[$key]);
-                } elseif (is_scalar($val) && !isset($this->options['bind'][$key])) {
-                    // 字段类型检查
-                    $this->_parseType($data, $key, $this->options['bind']);
-                }
-            }
-        }
-        // 安全过滤
-        if (!empty($this->options['filter'])) {
-            $data = array_map($this->options['filter'], $data);
-            unset($this->options['filter']);
-        }
-        // 回调方法
-        $this->_before_write($data);
-        if (empty($data)) {
-            // 没有数据则不执行
-            throw new Exception('no data to write');
-        }
-        return $data;
-    }
-    // 写入数据前的回调方法 包括新增和更新
-    protected function _before_write(&$data)
-    {}
-
-    /**
-     * 新增数据
+     * 获取当前模型的数据库查询对象
      * @access public
-     * @param mixed $data 数据
-     * @param boolean $replace 是否replace
-     * @return mixed
-     * @throws \think\Exception
+     * @param bool $baseQuery 是否调用全局查询范围
+     * @return Query
      */
-    public function add($data = '', $replace = false)
+    public function db($baseQuery = true)
     {
-        // 数据处理
-        $data = $this->_write_data($data, 'insert');
-        if (false === $data) {
-            return false;
-        }
-        // 分析表达式
-        $options = $this->_parseOptions();
-        if (false === $this->_before_insert($data, $options)) {
-            return false;
-        }
-        // 写入数据到数据库
-        $result = $this->db->insert($data, $options, $replace);
-        if (false !== $result && is_numeric($result)) {
-            $pk = $this->getPk($options['table']);
-            // 增加复合主键支持
-            if (is_array($pk)) {
-                return $result;
-            }
-            $insertId = $this->getLastInsID();
-            if ($insertId) {
-                // 自增主键返回插入ID
-                $data[$pk] = $insertId;
-            }
-            if (false === $this->_after_insert($data, $options)) {
-                return false;
-            }
-        }
-        return !empty($insertId) ? $insertId : $result;
-    }
-    // 插入数据前的回调方法
-    protected function _before_insert(&$data, $options = [])
-    {}
-    // 插入成功后的回调方法
-    protected function _after_insert($data, $options = [])
-    {}
-
-    public function addAll($dataList, $options = [], $replace = false)
-    {
-        if (empty($dataList)) {
-            throw new Exception('no data to write');
-        }
-        // 数据处理
-        foreach ($dataList as &$data) {
-            $data = $this->_write_data($data, 'insert');
-            if (false === $data) {
-                return false;
-            }
-        }
-        // 分析表达式
-        $options = $this->_parseOptions($options);
-        // 写入数据到数据库
-        $result = $this->db->insertAll($dataList, $options, $replace);
-        if (false !== $result) {
-            $insertId = $this->getLastInsID();
-        }
-        return !empty($insertId) ? $insertId : $result;
-    }
-
-    /**
-     * 保存数据
-     * @access public
-     * @param mixed $data 数据
-     * @return boolean
-     * @throws \think\Exception
-     */
-    public function save($data = '')
-    {
-        // 数据处理
-        $data = $this->_write_data($data, 'update');
-        if (false == $data) {
-            return false;
-        }
-        // 分析表达式
-        $options = $this->_parseOptions();
-        $pk      = $this->getPk($options['table']);
-        if (!isset($options['where'])) {
-            // 如果存在主键数据 则自动作为更新条件
-            if (is_string($pk) && isset($data[$pk])) {
-                $where[$pk] = $data[$pk];
-                unset($data[$pk]);
-            } elseif (is_array($pk)) {
-                // 增加复合主键支持
-                foreach ($pk as $field) {
-                    if (isset($data[$field])) {
-                        $where[$field] = $data[$field];
-                    } else {
-                        // 如果缺少复合主键数据则不执行
-                        throw new Exception('miss complex primary data');
-                    }
-                    unset($data[$field]);
-                }
-            }
-            if (!isset($where)) {
-                // 如果没有任何更新条件则不执行
-                throw new Exception('no data to update without where');
-            } else {
-                $options['where'] = $where;
-            }
-        }
-        if (is_string($pk) && isset($options['where'][$pk])) {
-            $pkValue = $options['where'][$pk];
-        }
-        if (false === $this->_before_update($data, $options)) {
-            return false;
-        }
-        $result = $this->db->update($data, $options);
-        if (false !== $result && is_numeric($result)) {
-            if (isset($pkValue)) {
-                $data[$pk] = $pkValue;
-            }
-            $this->_after_update($data, $options);
-        }
-        return $result;
-    }
-    // 更新数据前的回调方法
-    protected function _before_update(&$data, $options = [])
-    {}
-    // 更新成功后的回调方法
-    protected function _after_update($data, $options = [])
-    {}
-
-    /**
-     * 删除数据
-     * @access public
-     * @param mixed $options 表达式
-     * @return mixed
-     * @throws \think\Exception
-     */
-    public function delete($options = [])
-    {
-        $pk = $this->getPk();
-        if (empty($options) && empty($this->options['where'])) {
-            // 如果删除条件为空 则删除当前数据对象所对应的记录
-            if (!empty($this->data) && is_string($pk) && isset($this->data[$pk])) {
-                return $this->delete($this->data[$pk]);
-            } else {
-                throw new Exception('no data to delete without where');
-            }
-        }
-        if (!empty($options) && empty($options['where'])) {
-            // AR模式分析主键条件
-            $this->parsePkWhere($options);
-        }
-
-        // 分析表达式
-        $options = $this->_parseOptions($options);
-        if (empty($options['where'])) {
-            // 如果条件为空 不进行删除操作 除非设置 1=1
-            throw new Exception('no data to delete without where');
-        }
-        if (is_string($pk) && isset($options['where'][$pk])) {
-            $pkValue = $options['where'][$pk];
-        }
-        $result = $this->db->delete($options);
-        if (false !== $result && is_numeric($result)) {
-            $data = [];
-            if (isset($pkValue)) {
-                $data[$pk] = $pkValue;
-            }
-            $this->_after_delete($data, $options);
-        }
-        // 返回删除记录个数
-        return $result;
-    }
-    // 删除成功后的回调方法
-    protected function _after_delete($data, $options = [])
-    {}
-
-    /**
-     * 查询数据集
-     * @access public
-     * @param mixed $options 表达式参数
-     * @return mixed
-     * @throws \think\Exception
-     */
-    public function select($options = [])
-    {
-        if (false === $options) {
-            // 用于子查询 不查询只返回SQL
-            $options['fetch_sql'] = true;
-        } elseif (!empty($options) && empty($options['where'])) {
-            // AR模式主键条件分析
-            $this->parsePkWhere($options);
-        }
-
-        // 分析表达式
-        $options = $this->_parseOptions($options);
-        // 判断查询缓存
-        if (isset($options['cache'])) {
-            $cache = $options['cache'];
-            if (!isset($cache['key']) || !is_string($cache['key'])) {
-                $cache['key'] = md5(serialize($options));
-            }
-            $cache['expire'] = isset($cache['expire']) ? $cache['expire'] : null;
-            $data            = Cache::get($cache['key']);
-            if (false !== $data) {
-                return $data;
-            }
-        }
-        $resultSet = $this->db->select($options);
-
-        if (!empty($resultSet)) {
-            // 有查询结果
-            if (is_string($resultSet)) {
-                return $resultSet;
-            }
-
-            // 数据列表读取后的处理
-            $resultSet = $this->_read_data_list($resultSet, $options);
-            // 回调
-            $this->_after_select($resultSet, $options);
-            if (isset($options['index'])) {
-                // 对数据集进行索引
-                $index = explode(',', $options['index']);
-                foreach ($resultSet as $result) {
-                    $_key = $result[$index[0]];
-                    if (isset($index[1]) && isset($result[$index[1]])) {
-                        $cols[$_key] = $result[$index[1]];
-                    } else {
-                        $cols[$_key] = $result;
-                    }
-                }
-                $resultSet = $cols;
-            }
-        }
-
-        if (isset($cache)) {
-            Cache::set($cache['key'], $resultSet, $cache['expire']);
-        }
-        return $resultSet;
-    }
-
-    /**
-     * 把主键值转换为查询条件 支持复合主键
-     * @access public
-     * @param mixed $options 表达式参数
-     * @return void
-     * @throws \think\Exception
-     */
-    protected function parsePkWhere(&$options)
-    {
-        $pk = $this->getPk();
-        if (is_string($pk)) {
-            // 根据主键查询
-            if (is_array($options)) {
-                // 判断是否索引数组
-                if (0 === key($options)) {
-                    $where[$pk] = ['in', $options];
+        $model = $this->class;
+        if (!isset(self::$links[$model])) {
+            // 合并数据库配置
+            if (!empty($this->connection)) {
+                if (is_array($this->connection)) {
+                    $connection = array_merge(Config::get('database'), $this->connection);
                 } else {
-                    return;
+                    $connection = $this->connection;
                 }
             } else {
-                $where[$pk] = strpos($options, ',') ? ['IN', $options] : $options;
+                $connection = [];
             }
-            $options          = [];
-            $options['where'] = $where;
-        } elseif (is_array($pk) && is_array($options) && !empty($options)) {
-            // 根据复合主键查询
-            $array = array_intersect_key($options, $pk);
-            if (count($pk) == count($array)) {
-                $options          = array_diff_key($options, $array);
-                $options['where'] = array_combine($pk, $array);
+            // 设置当前模型 确保查询返回模型对象
+            $query = Db::connect($connection)->getQuery($model, $this->query);
+
+            // 设置当前数据表和模型名
+            if (!empty($this->table)) {
+                $query->setTable($this->table);
             } else {
-                throw new Exception('miss complex primary data');
+                $query->name($this->name);
             }
+
+            if (!empty($this->pk)) {
+                $query->pk($this->pk);
+            }
+
+            self::$links[$model] = $query;
         }
-        return;
+        // 全局作用域
+        if ($baseQuery && method_exists($this, 'base')) {
+            call_user_func_array([$this, 'base'], [ & self::$links[$model]]);
+        }
+        // 返回当前模型的数据库查询对象
+        return self::$links[$model];
     }
 
     /**
-     * 数据列表读取后的处理
+     *  初始化模型
      * @access protected
-     * @param array $resultSet 当前数据
-     * @return array
-     */
-    protected function _read_data_list($resultSet, $options)
-    {
-        $resultSet = array_map([$this, '_read_data'], $resultSet);
-        return $resultSet;
-    }
-    // 查询成功后的回调方法
-    protected function _after_select(&$resultSet, $options = [])
-    {}
-
-    /**
-     * 获取一条记录的某个字段值
-     * @access public
-     * @param string $field 字段名
-     * @param null   $sepa  字段数据间隔符号 NULL返回数组
-     * @return array|mixed|null
-     */
-    public function getField($field, $sepa = null)
-    {
-        $options['field'] = $field;
-        $options          = $this->_parseOptions($options);
-        $field            = trim($field);
-        // 判断查询缓存
-        if (isset($options['cache'])) {
-            $cache        = $options['cache'];
-            $cache['key'] = is_string($cache['key']) ? $cache['key'] : md5($sepa . serialize($options));
-            $data         = Cache::get($cache['key']);
-            if (false !== $data) {
-                return $data;
-            }
-        }
-        if (strpos($field, ',')) {
-            // 多字段
-            if (!isset($options['limit'])) {
-                $options['limit'] = is_numeric($sepa) ? $sepa : '';
-            }
-            $resultSet = $this->db->select($options);
-            if (!empty($resultSet)) {
-                if (is_string($resultSet)) {
-                    return $resultSet;
-                }
-                $field = array_keys($resultSet[0]);
-                $cols  = [];
-                $count = count($field);
-                foreach ($resultSet as $result) {
-                    $name = $result[$field[0]];
-                    if (2 == $count) {
-                        $cols[$name] = $result[$field[1]];
-                    } else {
-                        $cols[$name] = is_string($sepa) ? implode($sepa, array_slice($result, 1)) : $result;
-                    }
-                }
-                if (isset($cache)) {
-                    Cache::set($cache['key'], $cols, $cache['expire']);
-                }
-                return $cols;
-            }
-        } else {
-            // 查找一条记录
-            // 返回数据个数
-            if (true !== $sepa) {
-                // 当sepa指定为true的时候 返回所有数据
-                $options['limit'] = is_numeric($sepa) ? $sepa : 1;
-            }
-            $result = $this->db->select($options);
-            if (!empty($result)) {
-                if (is_string($result)) {
-                    return $result;
-                }
-                if (true !== $sepa && 1 == $options['limit']) {
-                    $data = reset($result[0]);
-                    if (isset($cache)) {
-                        Cache::set($cache['key'], $data, $cache['expire']);
-                    }
-                    return $data;
-                }
-                $array = [];
-                foreach ($result as $val) {
-                    $array[] = $val[$field];
-                }
-                if (isset($cache)) {
-                    Cache::set($cache['key'], $array, $cache['expire']);
-                }
-                return $array;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * 设置记录的某个字段值
-     * 支持使用数据库字段和方法
-     * @access public
-     * @param string|array $field  字段名
-     * @param string $value  字段值
-     * @return boolean
-     */
-    public function setField($field, $value = '')
-    {
-        if (is_array($field)) {
-            $data = $field;
-        } else {
-            $data[$field] = $value;
-        }
-        // 更新某个字段的时候 忽略数据副本
-        $this->duplicate = [];
-        return $this->save($data);
-    }
-
-    /**
-     * 字段值(延迟)增长
-     * @access public
-     * @param string $field  字段名
-     * @param integer $step  增长值
-     * @param integer $lazyTime  延时时间(s)
-     * @return boolean
-     * @throws \think\Exception
-     */
-    public function setInc($field, $step = 1, $lazyTime = 0)
-    {
-        $condition = !empty($this->options['where']) ? $this->options['where'] : [];
-        if (empty($condition)) {
-            // 没有条件不做任何更新
-            throw new Exception('no data to update');
-        }
-        if ($lazyTime > 0) {
-            // 延迟写入
-            $guid = md5($this->name . '_' . $field . '_' . serialize($condition));
-            $step = $this->lazyWrite($guid, $step, $lazyTime);
-            if (empty($step)) {
-                return true; // 等待下次写入
-            }
-        }
-        return $this->setField($field, ['exp', $field . '+' . $step]);
-    }
-
-    /**
-     * 字段值（延迟）减少
-     * @access public
-     * @param string $field  字段名
-     * @param integer $step  减少值
-     * @param integer $lazyTime  延时时间(s)
-     * @return boolean
-     * @throws \think\Exception
-     */
-    public function setDec($field, $step = 1, $lazyTime = 0)
-    {
-        $condition = !empty($this->options['where']) ? $this->options['where'] : [];
-        if (empty($condition)) {
-            // 没有条件不做任何更新
-            throw new Exception('no data to update');
-        }
-        if ($lazyTime > 0) {
-            // 延迟写入
-            $guid = md5($this->name . '_' . $field . '_' . serialize($condition));
-            $step = $this->lazyWrite($guid, -$step, $lazyTime);
-            if (empty($step)) {
-                return true; // 等待下次写入
-            }
-        }
-        return $this->setField($field, ['exp', $field . '-' . $step]);
-    }
-
-    /**
-     * 延时更新检查 返回false表示需要延时
-     * 否则返回实际写入的数值
-     * @access public
-     * @param string $guid  写入标识
-     * @param integer $step  写入步进值
-     * @param integer $lazyTime  延时时间(s)
-     * @return false|integer
-     */
-    protected function lazyWrite($guid, $step, $lazyTime)
-    {
-        if (false !== ($value = Cache::get($guid))) {
-            // 存在缓存写入数据
-            if (NOW_TIME > Cache::get($guid . '_time') + $lazyTime) {
-                // 延时更新时间到了，删除缓存数据 并实际写入数据库
-                Cache::rm($guid);
-                Cache::rm($guid . '_time');
-                return $value + $step;
-            } else {
-                // 追加数据到缓存
-                Cache::set($guid, $value + $step, 0);
-                return false;
-            }
-        } else {
-            // 没有缓存数据
-            Cache::set($guid, $step, 0);
-            // 计时开始
-            Cache::set($guid . '_time', NOW_TIME, 0);
-            return false;
-        }
-    }
-
-    /**
-     * 生成查询SQL 可用于子查询
-     * @access public
-     * @return string
-     */
-    public function buildSql()
-    {
-        return '( ' . $this->fetchSql(true)->select() . ' )';
-    }
-
-    /**
-     * 分析表达式（可用于查询或者写入操作）
-     * @access protected
-     * @param array $options 表达式参数
-     * @return array
-     */
-    protected function _parseOptions($options = [])
-    {
-        if (is_array($options)) {
-            $options = array_merge($this->options, $options);
-        }
-
-        // 记录操作的模型名称
-        $options['model'] = $this->name;
-
-        if (isset($options['table'])) {
-            // 动态指定表名
-            $fields = $this->getTableInfo('fields', $options['table']);
-        } else {
-            $options['table'] = $this->getTableName();
-            $fields           = $this->getFields();
-        }
-        if (!empty($options['alias'])) {
-            $options['table'] .= ' ' . $options['alias'];
-        }
-        // 字段类型验证
-        if (isset($options['where']) && is_array($options['where']) && !empty($fields)) {
-            // 对数组查询条件进行字段类型检查
-            foreach ($options['where'] as $key => $val) {
-                $key = trim($key);
-                if (in_array($key, $fields, true) && is_scalar($val) && empty($options['bind'][$key])) {
-                    $this->_parseType($options['where'], $key, $options['bind'], $options['table']);
-                }
-            }
-        }
-        // 查询过后清空sql表达式组装 避免影响下次查询
-        $this->options = [];
-        // 表达式过滤
-        $this->_options_filter($options);
-        return $options;
-    }
-    // 表达式过滤回调方法
-    protected function _options_filter(&$options)
-    {}
-
-    /**
-     * 数据类型检测和自动转换
-     * @access protected
-     * @param array $data 数据
-     * @param string $key 字段名
-     * @param array $bind 参数绑定列表
-     * @param string $tableName 表名
      * @return void
      */
-    protected function _parseType(&$data, $key, &$bind, $tableName = '')
+    protected function initialize()
     {
-        $binds = $this->getTableInfo('bind', $tableName);
-        $type  = $this->getTableInfo('type', $tableName);
-        // 强制类型转换
-        if (false !== strpos($type[$key], 'int')) {
-            $data[$key] = (int) $data[$key];
-        } elseif (false !== strpos($type[$key], 'float') || false !== strpos($type[$key], 'double')) {
-            $data[$key] = (float) $data[$key];
-        } elseif (false !== strpos($type[$key], 'bool')) {
-            $data[$key] = (bool) $data[$key];
+        $class = get_class($this);
+        if (!isset(static::$initialized[$class])) {
+            static::$initialized[$class] = true;
+            static::init();
         }
-        if (':' == substr($data[$key], 0, 1) && isset($bind[substr($data[$key], 1)])) {
-            // 已经绑定 无需再次绑定 请确保bind方法优先执行
-            return;
-        }
-        $bind[$key] = [$data[$key], isset($binds[$key]) ? $binds[$key] : \PDO::PARAM_STR];
-        $data[$key] = ':' . $key;
     }
 
     /**
-     * 查询数据
-     * @access public
-     * @param mixed $options 表达式参数
-     * @return mixed
-     * @throws \think\Exception
+     * 初始化处理
+     * @access protected
+     * @return void
      */
-    public function find($options = [])
+    protected static function init()
     {
-        if (!empty($options) && empty($options['where'])) {
-            // AR模式主键条件分析
-            $this->parsePkWhere($options);
-        }
-        // 总是查找一条记录
-        $options['limit'] = 1;
-        // 分析表达式
-        $options = $this->_parseOptions($options);
-        // 判断查询缓存
-        if (isset($options['cache'])) {
-            $cache = $options['cache'];
-            if (!isset($cache['key']) || !is_string($cache['key'])) {
-                $cache['key'] = md5(serialize($options));
+    }
+
+    /**
+     * 设置数据对象值
+     * @access public
+     * @param mixed $data  数据或者属性名
+     * @param mixed $value 值
+     * @return $this
+     */
+    public function data($data, $value = null)
+    {
+        if (is_string($data)) {
+            $this->data[$data] = $value;
+        } else {
+            // 清空数据
+            $this->data = [];
+            if (is_object($data)) {
+                $data = get_object_vars($data);
             }
-            $cache['expire'] = isset($cache['expire']) ? $cache['expire'] : null;
-            $data            = Cache::get($cache['key']);
-            if (false !== $data) {
+            if (true === $value) {
+                // 数据对象赋值
+                foreach ($data as $key => $value) {
+                    $this->setAttr($key, $value, $data);
+                }
+            } else {
                 $this->data = $data;
-                return $data;
             }
         }
-        $resultSet = $this->db->select($options);
-
-        if (empty($resultSet)) {
-            // 查询结果为空
-            return null;
-        }
-        if (is_string($resultSet)) {
-            return $resultSet;
-        }
-        // 数据处理
-        $data = $this->_read_data($resultSet[0], $options);
-        // 回调
-        $this->_after_find($data, $options);
-        if (isset($cache)) {
-            Cache::set($cache['key'], $data, $cache['expire']);
-        }
-        // 数据对象赋值
-        $this->data = $data;
-        // 数据副本
-        $this->duplicate = $data;
-        return $this->data;
-    }
-
-    /**
-     * 数据读取后的处理
-     * @access protected
-     * @param array $data 当前数据
-     * @return array
-     */
-    protected function _read_data($data, $options = [])
-    {
-        // 检查字段映射
-        if (!empty($this->map)) {
-            foreach ($this->map as $key => $val) {
-                if (isset($data[$val])) {
-                    $data[$key] = $data[$val];
-                    unset($data[$val]);
-                }
-            }
-        }
-        return $data;
-    }
-    // 数据读取成功后的回调方法
-    protected function _after_find(&$result, $options = [])
-    {}
-
-    /**
-     * 创建数据对象 但不保存到数据库
-     * @access public
-     * @param mixed $data 创建数据
-     * @return mixed
-     * @throws \think\Exception
-     */
-    public function create($data = '')
-    {
-        // 如果没有传值默认取POST数据
-        if (empty($data)) {
-            $data = \think\Input::post();
-        } elseif (is_object($data)) {
-            $data = get_object_vars($data);
-        }
-        // 验证数据
-        if (empty($data) || !is_array($data)) {
-            throw new Exception('invalid data type');
-        }
-
-        // 检测提交字段的合法性
-        if (isset($this->options['field'])) {
-            // $this->field('field1,field2...')->create()
-            $fields = $this->options['field'];
-            unset($this->options['field']);
-            if (is_string($fields)) {
-                $fields = explode(',', $fields);
-            }
-            foreach ($data as $key => $val) {
-                if (!in_array($key, $fields)) {
-                    unset($data[$key]);
-                }
-            }
-        }
-
-        // 数据自动验证
-        if (!$this->dataValidate($data)) {
-            return false;
-        }
-
-        // 数据自动填充
-        $this->dataFill($data);
-
-        // 过滤创建的数据
-        $this->_create_filter($data);
-        // 赋值当前数据对象
-        $this->data = $data;
-        // 返回创建的数据以供其他调用
-        return $data;
-    }
-    // 数据对象创建后的回调方法
-    protected function _create_filter(&$data)
-    {}
-
-    /**
-     * 数据自动验证
-     * @access protected
-     * @param array $data  数据
-     * @return void
-     */
-    protected function dataValidate(&$data)
-    {
-        if (!empty($this->options['validate'])) {
-            if (!empty($this->rule)) {
-                Validate::rule($this->rule);
-            }
-            if (!Validate::check($data, $this->options['validate'])) {
-                $this->error = Validate::getError();
-                return false;
-            }
-            $this->options['validate'] = null;
-        }
-        return true;
-    }
-
-    /**
-     * 数据自动填充
-     * @access protected
-     * @param array $data  数据
-     * @return void
-     */
-    protected function dataFill(&$data)
-    {
-        if (!empty($this->options['auto'])) {
-            // 获取自动完成规则
-            list($rules, $options, $scene) = $this->getDataRule($this->options['auto']);
-
-            foreach ($rules as $key => $val) {
-                if (is_numeric($key) && is_array($val)) {
-                    $key = array_shift($val);
-                }
-                if (!empty($scene) && !in_array($key, $scene)) {
-                    continue;
-                }
-                // 数据自动填充
-                $this->fillItem($key, $val, $data, $options);
-            }
-            $this->options['auto'] = null;
-        }
-    }
-
-    /**
-     * 获取数据自动完成的规则定义
-     * @access protected
-     * @param mixed $rules  数据规则
-     * @return array
-     */
-    protected function getDataRule($rules)
-    {
-        if (is_string($rules)) {
-            // 读取配置定义
-            $config = Config::get('auto');
-            if (strpos($rules, '.')) {
-                list($name, $group) = explode('.', $rules);
-            } else {
-                $name = $rules;
-            }
-            $rules = isset($config[$name]) ? $config[$name] : [];
-            if (isset($config['__all__'])) {
-                $rules = array_merge($config['__all__'], $rules);
-            }
-        }
-        if (isset($rules['__option__'])) {
-            // 参数设置
-            $options = $rules['__option__'];
-            unset($rules['__option__']);
-        } else {
-            $options = [];
-        }
-        if (isset($group) && isset($options['scene'][$group])) {
-            // 如果设置了适用场景
-            $scene = $options['scene'][$group];
-            if (is_string($scene)) {
-                $scene = explode(',', $scene);
-            }
-        } else {
-            $scene = [];
-        }
-        return [$rules, $options, $scene];
-    }
-
-    /**
-     * 数据自动填充
-     * @access protected
-     * @param string $key  字段名
-     * @param mixed $val  填充规则
-     * @param array $data  数据
-     * @param array $options  参数
-     * @return void
-     */
-    protected function fillItem($key, $val, &$data, $options = [])
-    {
-        // 获取数据 支持二维数组
-        if (strpos($key, '.')) {
-            list($name1, $name2) = explode('.', $key);
-            $value               = isset($data[$name1][$name2]) ? $data[$name1][$name2] : null;
-        } else {
-            $value = isset($data[$key]) ? $data[$key] : null;
-        }
-        if ((isset($options['value_fill']) && in_array($key, is_string($options['value_fill']) ? explode(',', $options['value_fill']) : $options['value_fill']) && '' == $value)
-            || (isset($options['exists_fill']) && in_array($key, is_string($options['exists_fill']) ? explode(',', $options['exists_fill']) : $options['exists_fill']) && is_null($value))) {
-            // 不满足自动填充条件
-            return;
-        }
-        if ($val instanceof \Closure) {
-            $result = call_user_func_array($val, [$value, &$data]);
-        } elseif (isset($val[0]) && $val[0] instanceof \Closure) {
-            $result = call_user_func_array($val[0], [$value, &$data]);
-        } elseif (!is_array($val)) {
-            $result = $val;
-        } else {
-            $rule   = isset($val[0]) ? $val[0] : $val;
-            $type   = isset($val[1]) ? $val[1] : 'value';
-            $params = isset($val[2]) ? (array) $val[2] : [];
-            switch ($type) {
-                case 'behavior':
-                    Hook::exec($rule, '', $data);
-                    return;
-                case 'callback':
-                    array_unshift($params, $value);
-                    $result = call_user_func_array($rule, $params);
-                    break;
-                case 'serialize':
-                    if (is_string($rule)) {
-                        $rule = explode(',', $rule);
-                    }
-                    $serialize = [];
-                    foreach ($rule as $name) {
-                        if (strpos($name, '.')) {
-                            list($name1, $name2) = explode('.', $name);
-                            if (isset($data[$name1][$name2])) {
-                                $serialize[$name] = $data[$name1][$name2];
-                                unset($data[$name1][$name2]);
-                            }
-                        } elseif (isset($data[$name])) {
-                            $serialize[$name] = $data[$name];
-                            unset($data[$name]);
-                        }
-                    }
-                    $fun    = !empty($params['type']) ? $params['type'] : 'serialize';
-                    $result = $fun($serialize);
-                    break;
-                case 'ignore':
-                    if ($rule === $value) {
-                        if (strpos($key, '.')) {
-                            unset($data[$name1][$name2]);
-                        } else {
-                            unset($data[$key]);
-                        }
-                    }
-                    return;
-                case 'value':
-                default:
-                    $result = $rule;
-                    break;
-            }
-        }
-        if (strpos($key, '.')) {
-            $data[$name1][$name2] = $result;
-        } else {
-            $data[$key] = $result;
-        }
-    }
-
-    /**
-     * 切换当前的数据库连接
-     * @access public
-     * @param mixed $linkId  连接标识
-     * @param mixed $config  数据库连接信息
-     * @return Model
-     */
-    public function db($linkId = '', $config = '')
-    {
-        if ('' === $linkId && $this->db) {
-            return $this->db;
-        }
-
-        if (!isset($this->links[$linkId])) {
-            // 创建一个新的实例
-            if (is_string($linkId) && '' == $config) {
-                $config = Config::get($linkId);
-            }
-            $this->links[$linkId] = Db::connect($config);
-        } elseif (null === $config) {
-            $this->links[$linkId]->close(); // 关闭数据库连接
-            unset($this->links[$linkId]);
-            return;
-        }
-
-        // 切换数据库连接
-        $this->db = $this->links[$linkId];
-        $this->_after_db();
         return $this;
     }
-    // 数据库切换后回调方法
-    protected function _after_db()
-    {}
 
     /**
-     * 得到当前的数据对象名称
+     * 获取对象原始数据 如果不存在指定字段返回false
      * @access public
-     * @return string
+     * @param string $name 字段名 留空获取全部
+     * @return mixed
+     * @throws InvalidArgumentException
      */
-    public function getModelName()
+    public function getData($name = null)
     {
-        if (empty($this->name)) {
-            // 解决非windows环境下获取不到basename的bug(xiaobo.sun modify 20160215)
-            $this->name = basename(str_replace('\\', '/', get_class($this)));
+        if (is_null($name)) {
+            return $this->data;
+        } elseif (array_key_exists($name, $this->data)) {
+            return $this->data[$name];
+        } else {
+            throw new InvalidArgumentException('property not exists:' . $this->class . '->' . $name);
         }
-        return $this->name;
     }
 
     /**
-     * 得到完整的数据表名
+     * 修改器 设置数据对象值
      * @access public
+     * @param string $name  属性名
+     * @param mixed  $value 属性值
+     * @param array  $data  数据
+     * @return $this
+     */
+    public function setAttr($name, $value, $data = [])
+    {
+        if (is_null($value) && $this->autoWriteTimestamp && in_array($name, [$this->createTime, $this->updateTime])) {
+            // 自动写入的时间戳字段
+            $value = $this->autoWriteTimestamp($name);
+        } else {
+            // 检测修改器
+            $method = 'set' . Loader::parseName($name, 1) . 'Attr';
+            if (method_exists($this, $method)) {
+                $value = $this->$method($value, array_merge($data, $this->data));
+            } elseif (isset($this->type[$name])) {
+                // 类型转换
+                $value = $this->writeTransform($value, $this->type[$name]);
+            }
+        }
+
+        // 标记字段更改
+        if (!isset($this->data[$name])) {
+            $this->change[] = $name;
+        } elseif (is_scalar($value) && is_scalar($this->data[$name]) && 0 !== strcmp($this->data[$name], $value)) {
+            $this->change[] = $name;
+        } elseif (!is_object($value) && $value != $this->data[$name]) {
+            $this->change[] = $name;
+        }
+        // 设置数据对象属性
+        $this->data[$name] = $value;
+        return $this;
+    }
+
+    /**
+     * 自动写入时间戳
+     * @access public
+     * @param string $name 时间戳字段
+     * @return mixed
+     */
+    protected function autoWriteTimestamp($name)
+    {
+        if (isset($this->type[$name])) {
+            $type = $this->type[$name];
+            if (strpos($type, ':')) {
+                list($type, $param) = explode(':', $type, 2);
+            }
+            switch ($type) {
+                case 'datetime':
+                case 'date':
+                    $format = !empty($param) ? $param : $this->dateFormat;
+                    $value  = $this->formatDateTime($_SERVER['REQUEST_TIME'], $format);
+                    break;
+                case 'timestamp':
+                case 'integer':
+                default:
+                    $value = $_SERVER['REQUEST_TIME'];
+                    break;
+            }
+        } elseif (is_string($this->autoWriteTimestamp) && in_array(strtolower($this->autoWriteTimestamp), [
+            'datetime',
+            'date',
+            'timestamp',
+        ])
+        ) {
+            $value = $this->formatDateTime($_SERVER['REQUEST_TIME'], $this->dateFormat);
+        } else {
+            $value = $this->formatDateTime($_SERVER['REQUEST_TIME'], $this->dateFormat, true);
+        }
+        return $value;
+    }
+
+    /**
+     * 时间日期字段格式化处理
+     * @access public
+     * @param mixed $time      时间日期表达式
+     * @param mixed $format    日期格式
+     * @param bool  $timestamp 是否进行时间戳转换
+     * @return mixed
+     */
+    protected function formatDateTime($time, $format, $timestamp = false)
+    {
+        if (false !== strpos($format, '\\')) {
+            $time = new $format($time);
+        } elseif (!$timestamp && false !== $format) {
+            $time = date($format, $time);
+        }
+        return $time;
+    }
+
+    /**
+     * 数据写入 类型转换
+     * @access public
+     * @param mixed        $value 值
+     * @param string|array $type  要转换的类型
+     * @return mixed
+     */
+    protected function writeTransform($value, $type)
+    {
+        if (is_array($type)) {
+            list($type, $param) = $type;
+        } elseif (strpos($type, ':')) {
+            list($type, $param) = explode(':', $type, 2);
+        }
+        switch ($type) {
+            case 'integer':
+                $value = (int) $value;
+                break;
+            case 'float':
+                if (empty($param)) {
+                    $value = (float) $value;
+                } else {
+                    $value = (float) number_format($value, $param);
+                }
+                break;
+            case 'boolean':
+                $value = (bool) $value;
+                break;
+            case 'timestamp':
+                if (!is_numeric($value)) {
+                    $value = strtotime($value);
+                }
+                break;
+            case 'datetime':
+                $format = !empty($param) ? $param : $this->dateFormat;
+                $value  = is_numeric($value) ? $value : strtotime($value);
+                $value  = $this->formatDateTime($value, $format);
+                break;
+            case 'object':
+                if (is_object($value)) {
+                    $value = json_encode($value, JSON_FORCE_OBJECT);
+                }
+                break;
+            case 'array':
+                $value = (array) $value;
+            case 'json':
+                $option = !empty($param) ? (int) $param : JSON_UNESCAPED_UNICODE;
+                $value  = json_encode($value, $option);
+                break;
+            case 'serialize':
+                $value = serialize($value);
+                break;
+
+        }
+        return $value;
+    }
+
+    /**
+     * 获取器 获取数据对象的值
+     * @access public
+     * @param string $name 名称
+     * @return mixed
+     * @throws InvalidArgumentException
+     */
+    public function getAttr($name)
+    {
+        try {
+            $notFound = false;
+            $value    = $this->getData($name);
+        } catch (InvalidArgumentException $e) {
+            $notFound = true;
+            $value    = null;
+        }
+
+        // 检测属性获取器
+        $method = 'get' . Loader::parseName($name, 1) . 'Attr';
+        if (method_exists($this, $method)) {
+            $value = $this->$method($value, $this->data);
+        } elseif (isset($this->type[$name])) {
+            // 类型转换
+            $value = $this->readTransform($value, $this->type[$name]);
+        } elseif (in_array($name, [$this->createTime, $this->updateTime])) {
+            if (is_string($this->autoWriteTimestamp) && in_array(strtolower($this->autoWriteTimestamp), [
+                'datetime',
+                'date',
+                'timestamp',
+            ])
+            ) {
+                $value = $this->formatDateTime(strtotime($value), $this->dateFormat);
+            } else {
+                $value = $this->formatDateTime($value, $this->dateFormat);
+            }
+        } elseif ($notFound) {
+            $method = Loader::parseName($name, 1, false);
+            if (method_exists($this, $method) && $this->$method() instanceof Relation) {
+                // 清空之前的查询参数
+                $this->$method()->removeOption();
+                // 不存在该字段 获取关联数据
+                $value = $this->$method()->getRelation();
+                // 保存关联对象值
+                $this->data[$name] = $value;
+            } else {
+                throw new InvalidArgumentException('property not exists:' . $this->class . '->' . $name);
+            }
+        }
+        return $value;
+    }
+
+    /**
+     * 数据读取 类型转换
+     * @access public
+     * @param mixed        $value 值
+     * @param string|array $type  要转换的类型
+     * @return mixed
+     */
+    protected function readTransform($value, $type)
+    {
+        if (is_array($type)) {
+            list($type, $param) = $type;
+        } elseif (strpos($type, ':')) {
+            list($type, $param) = explode(':', $type, 2);
+        }
+        switch ($type) {
+            case 'integer':
+                $value = (int) $value;
+                break;
+            case 'float':
+                if (empty($param)) {
+                    $value = (float) $value;
+                } else {
+                    $value = (float) number_format($value, $param);
+                }
+                break;
+            case 'boolean':
+                $value = (bool) $value;
+                break;
+            case 'timestamp':
+                if (!is_null($value)) {
+                    $format = !empty($param) ? $param : $this->dateFormat;
+                    $value  = $this->formatDateTime($value, $format);
+                }
+                break;
+            case 'datetime':
+                if (!is_null($value)) {
+                    $format = !empty($param) ? $param : $this->dateFormat;
+                    $value  = $this->formatDateTime(strtotime($value), $format);
+                }
+                break;
+            case 'json':
+                $value = json_decode($value, true);
+                break;
+            case 'array':
+                $value = empty($value) ? [] : json_decode($value, true);
+                break;
+            case 'object':
+                $value = empty($value) ? new \stdClass() : json_decode($value);
+                break;
+            case 'serialize':
+                $value = unserialize($value);
+                break;
+            default:
+                if (false !== strpos($type, '\\')) {
+                    // 对象类型
+                    $value = new $type($value);
+                }
+        }
+        return $value;
+    }
+
+    /**
+     * 设置需要追加的输出属性
+     * @access public
+     * @param array $append   属性列表
+     * @param bool  $override 是否覆盖
+     * @return $this
+     */
+    public function append($append = [], $override = false)
+    {
+        $this->append = $override ? $append : array_merge($this->append, $append);
+        return $this;
+    }
+
+    /**
+     * 设置附加关联对象的属性
+     * @access public
+     * @param string       $relation 关联方法
+     * @param string|array $append   追加属性名
+     * @return $this
+     * @throws Exception
+     */
+    public function appendRelationAttr($relation, $append)
+    {
+        if (is_string($append)) {
+            $append = explode(',', $append);
+        }
+        $model = $this->getAttr($relation);
+        if ($model instanceof Model) {
+            foreach ($append as $key => $attr) {
+                $key = is_numeric($key) ? $attr : $key;
+                if ($this->__isset($key)) {
+                    throw new Exception('bind attr has exists:' . $key);
+                } else {
+                    $this->setAttr($key, $model->$attr);
+                }
+            }
+        }
+        return $this;
+    }
+
+    /**
+     * 设置需要隐藏的输出属性
+     * @access public
+     * @param array $hidden   属性列表
+     * @param bool  $override 是否覆盖
+     * @return $this
+     */
+    public function hidden($hidden = [], $override = false)
+    {
+        $this->hidden = $override ? $hidden : array_merge($this->hidden, $hidden);
+        return $this;
+    }
+
+    /**
+     * 设置需要输出的属性
+     * @access public
+     * @param array $visible
+     * @param bool  $override 是否覆盖
+     * @return $this
+     */
+    public function visible($visible = [], $override = false)
+    {
+        $this->visible = $override ? $visible : array_merge($this->visible, $visible);
+        return $this;
+    }
+
+    /**
+     * 解析隐藏及显示属性
+     * @access protected
+     * @param array $attrs  属性
+     * @param array $result 结果集
+     * @param bool  $visible
+     * @return array
+     */
+    protected function parseAttr($attrs, &$result, $visible = true)
+    {
+        $array = [];
+        foreach ($attrs as $key => $val) {
+            if (is_array($val)) {
+                if ($visible) {
+                    $array[] = $key;
+                }
+                $result[$key] = $val;
+            } elseif (strpos($val, '.')) {
+                list($key, $name) = explode('.', $val);
+                if ($visible) {
+                    $array[] = $key;
+                }
+                $result[$key][] = $name;
+            } else {
+                $array[] = $val;
+            }
+        }
+        return $array;
+    }
+
+    /**
+     * 转换子模型对象
+     * @access protected
+     * @param Model|ModelCollection $model
+     * @param                  $visible
+     * @param                  $hidden
+     * @param                  $key
+     * @return array
+     */
+    protected function subToArray($model, $visible, $hidden, $key)
+    {
+        // 关联模型对象
+        if (isset($visible[$key])) {
+            $model->visible($visible[$key]);
+        } elseif (isset($hidden[$key])) {
+            $model->hidden($hidden[$key]);
+        }
+        return $model->toArray();
+    }
+
+    /**
+     * 转换当前模型对象为数组
+     * @access public
+     * @return array
+     */
+    public function toArray()
+    {
+        $item    = [];
+        $visible = [];
+        $hidden  = [];
+        // 过滤属性
+        if (!empty($this->visible)) {
+            $array = $this->parseAttr($this->visible, $visible);
+            $data  = array_intersect_key($this->data, array_flip($array));
+        } elseif (!empty($this->hidden)) {
+            $array = $this->parseAttr($this->hidden, $hidden, false);
+            $data  = array_diff_key($this->data, array_flip($array));
+        } else {
+            $data = $this->data;
+        }
+
+        foreach ($data as $key => $val) {
+            if ($val instanceof Model || $val instanceof ModelCollection) {
+                // 关联模型对象
+                $item[$key] = $this->subToArray($val, $visible, $hidden, $key);
+            } elseif (is_array($val) && reset($val) instanceof Model) {
+                // 关联模型数据集
+                $arr = [];
+                foreach ($val as $k => $value) {
+                    $arr[$k] = $this->subToArray($value, $visible, $hidden, $k);
+                }
+                $item[$key] = $arr;
+            } else {
+                // 模型属性
+                $item[$key] = $this->getAttr($key);
+            }
+        }
+        // 追加属性（必须定义获取器）
+        if (!empty($this->append)) {
+            foreach ($this->append as $key => $name) {
+                if (is_array($name)) {
+                    // 追加关联对象属性
+                    $relation   = $this->getAttr($key);
+                    $item[$key] = $relation->append($name)->toArray();
+                } elseif (strpos($name, '.')) {
+                    list($key, $attr) = explode('.', $name);
+                    // 追加关联对象属性
+                    $relation   = $this->getAttr($key);
+                    $item[$key] = $relation->append([$attr])->toArray();
+                } else {
+                    $item[$name] = $this->getAttr($name);
+                }
+            }
+        }
+        return !empty($item) ? $item : [];
+    }
+
+    /**
+     * 转换当前模型对象为JSON字符串
+     * @access public
+     * @param integer $options json参数
      * @return string
      */
-    public function getTableName()
+    public function toJson($options = JSON_UNESCAPED_UNICODE)
     {
-        if (empty($this->trueTableName)) {
-            $tableName = !empty($this->tablePrefix) ? $this->tablePrefix : '';
-            if (!empty($this->tableName)) {
-                $tableName .= $this->tableName;
-            } else {
-                $tableName .= Loader::parseName($this->name);
+        return json_encode($this->toArray(), $options);
+    }
+
+    /**
+     * 转换当前模型数据集为数据集对象
+     * @access public
+     * @param array|\think\Collection $collection 数据集
+     * @return \think\Collection
+     */
+    public function toCollection($collection)
+    {
+        if ($this->resultSetType) {
+            if ('collection' == $this->resultSetType) {
+                $collection = new ModelCollection($collection);
+            } elseif (false !== strpos($this->resultSetType, '\\')) {
+                $class      = $this->resultSetType;
+                $collection = new $class($collection);
             }
-            $this->trueTableName = strtolower($tableName);
         }
-        return (!empty($this->dbName) ? $this->dbName . '.' : '') . $this->trueTableName;
+        return $collection;
+    }
+
+    /**
+     * 关联数据一起更新
+     * @access public
+     * @param mixed $relation 关联
+     * @return $this
+     */
+    public function together($relation)
+    {
+        if (is_string($relation)) {
+            $relation = explode(',', $relation);
+        }
+        $this->relationWrite = $relation;
+        return $this;
+    }
+
+    /**
+     * 获取模型对象的主键
+     * @access public
+     * @param string $name 模型名
+     * @return mixed
+     */
+    public function getPk($name = '')
+    {
+        if (!empty($name)) {
+            $table = $this->db(false)->getTable($name);
+            return $this->db(false)->getPk($table);
+        } elseif (empty($this->pk)) {
+            $this->pk = $this->db(false)->getPk();
+        }
+        return $this->pk;
+    }
+
+    /**
+     * 判断一个字段名是否为主键字段
+     * @access public
+     * @param string $key 名称
+     * @return bool
+     */
+    protected function isPk($key)
+    {
+        $pk = $this->getPk();
+        if (is_string($pk) && $pk == $key) {
+            return true;
+        } elseif (is_array($pk) && in_array($key, $pk)) {
+            return true;
+        }
+        return false;
+    }
+
+    /**
+     * 保存当前数据对象
+     * @access public
+     * @param array  $data     数据
+     * @param array  $where    更新条件
+     * @param string $sequence 自增序列名
+     * @return integer|false
+     */
+    public function save($data = [], $where = [], $sequence = null)
+    {
+        if (!empty($data)) {
+            // 数据自动验证
+            if (!$this->validateData($data)) {
+                return false;
+            }
+            // 数据对象赋值
+            foreach ($data as $key => $value) {
+                $this->setAttr($key, $value, $data);
+            }
+            if (!empty($where)) {
+                $this->isUpdate = true;
+            }
+        }
+
+        // 自动关联写入
+        if (!empty($this->relationWrite)) {
+            $relation = [];
+            foreach ($this->relationWrite as $key => $name) {
+                if (!is_numeric($key)) {
+                    $relation[$key] = [];
+                    foreach ($name as $val) {
+                        if (isset($this->data[$val])) {
+                            $relation[$key][$val] = $this->data[$val];
+                            unset($this->data[$val]);
+                        }
+                    }
+                } elseif (isset($this->data[$name])) {
+                    $relation[$name] = $this->data[$name];
+                    if (!$this->isUpdate) {
+                        unset($this->data[$name]);
+                    }
+                }
+            }
+        }
+
+        // 检测字段
+        if (!empty($this->field)) {
+            if (true === $this->field) {
+                $this->field = $this->db(false)->getTableInfo('', 'fields');
+            }
+            foreach ($this->data as $key => $val) {
+                if (!in_array($key, $this->field)) {
+                    unset($this->data[$key]);
+                }
+            }
+        }
+
+        // 数据自动完成
+        $this->autoCompleteData($this->auto);
+
+        // 自动写入更新时间
+        if ($this->autoWriteTimestamp && $this->updateTime && (empty($this->change) || !in_array($this->updateTime, $this->change))) {
+            $this->setAttr($this->updateTime, null);
+        }
+
+        // 事件回调
+        if (false === $this->trigger('before_write', $this)) {
+            return false;
+        }
+        $pk = $this->getPk();
+        if ($this->isUpdate) {
+            // 自动更新
+            $this->autoCompleteData($this->update);
+
+            // 事件回调
+            if (false === $this->trigger('before_update', $this)) {
+                return false;
+            }
+
+            // 去除没有更新的字段
+            $data = [];
+            foreach ($this->data as $key => $val) {
+                if (in_array($key, $this->change) || $this->isPk($key)) {
+                    $data[$key] = $val;
+                }
+            }
+
+            if (!empty($this->readonly)) {
+                // 只读字段不允许更新
+                foreach ($this->readonly as $key => $field) {
+                    if (isset($data[$field])) {
+                        unset($data[$field]);
+                    }
+                }
+            }
+
+            if (empty($where) && !empty($this->updateWhere)) {
+                $where = $this->updateWhere;
+            }
+
+            if (is_string($pk) && isset($data[$pk])) {
+                if (!isset($where[$pk])) {
+                    unset($where);
+                    $where[$pk] = $data[$pk];
+                }
+                unset($data[$pk]);
+            }
+
+            // 关联更新
+            if (isset($relation)) {
+                foreach ($relation as $name => $val) {
+                    if (isset($data[$name])) {
+                        unset($data[$name]);
+                    }
+                }
+            }
+
+            // 模型更新
+            $result = $this->db()->where($where)->update($data);
+
+            // 关联更新
+            if (isset($relation)) {
+                foreach ($relation as $name => $val) {
+                    if ($val instanceof Model) {
+                        $val->save();
+                    } else {
+                        unset($this->data[$name]);
+                        $model = $this->getAttr($name);
+                        if ($model instanceof Model) {
+                            $model->save($val);
+                        }
+                    }
+                }
+            }
+
+            // 清空change
+            $this->change = [];
+            // 更新回调
+            $this->trigger('after_update', $this);
+        } else {
+            // 自动写入
+            $this->autoCompleteData($this->insert);
+
+            // 自动写入创建时间
+            if ($this->autoWriteTimestamp && $this->createTime && (empty($this->change) || !in_array($this->createTime, $this->change))) {
+                $this->setAttr($this->createTime, null);
+            }
+
+            if (false === $this->trigger('before_insert', $this)) {
+                return false;
+            }
+
+            $result = $this->db()->insert($this->data);
+
+            // 获取自动增长主键
+            if ($result && is_string($pk) && (!isset($this->data[$pk]) || '' == $this->data[$pk])) {
+                $insertId = $this->db()->getLastInsID($sequence);
+                if ($insertId) {
+                    $this->data[$pk] = $insertId;
+                }
+            }
+
+            // 关联写入
+            if (isset($relation)) {
+                foreach ($relation as $name => $val) {
+                    $method = Loader::parseName($name, 1, false);
+                    $this->$method()->save($val);
+                }
+            }
+
+            // 标记为更新
+            $this->isUpdate = true;
+            // 清空change
+            $this->change = [];
+            // 新增回调
+            $this->trigger('after_insert', $this);
+        }
+        // 写入回调
+        $this->trigger('after_write', $this);
+
+        return $result;
+    }
+
+    /**
+     * 保存多个数据到当前数据对象
+     * @access public
+     * @param array   $dataSet 数据
+     * @param boolean $replace 是否自动识别更新和写入
+     * @return array|false
+     * @throws \Exception
+     */
+    public function saveAll($dataSet, $replace = true)
+    {
+        if ($this->validate) {
+            // 数据批量验证
+            $validate = $this->validate;
+            foreach ($dataSet as $data) {
+                if (!$this->validateData($data, $validate)) {
+                    return false;
+                }
+            }
+        }
+
+        $result = [];
+        $db     = $this->db();
+        $db->startTrans();
+        try {
+            $pk = $this->getPk();
+            if (is_string($pk) && $replace) {
+                $auto = true;
+            }
+            foreach ($dataSet as $key => $data) {
+                if (!empty($auto) && isset($data[$pk])) {
+                    $result[$key] = self::update($data, [], $this->field);
+                } else {
+                    $result[$key] = self::create($data, $this->field);
+                }
+            }
+            $db->commit();
+            return $result;
+        } catch (\Exception $e) {
+            $db->rollback();
+            throw $e;
+        }
+    }
+
+    /**
+     * 设置允许写入的字段
+     * @access public
+     * @param mixed $field 允许写入的字段 如果为true只允许写入数据表字段
+     * @return $this
+     */
+    public function allowField($field)
+    {
+        if (is_string($field)) {
+            $field = explode(',', $field);
+        }
+        $this->field = $field;
+        return $this;
+    }
+
+    /**
+     * 设置只读字段
+     * @access public
+     * @param mixed $field 只读字段
+     * @return $this
+     */
+    public function readonly($field)
+    {
+        if (is_string($field)) {
+            $field = explode(',', $field);
+        }
+        $this->readonly = $field;
+        return $this;
+    }
+
+    /**
+     * 是否为更新数据
+     * @access public
+     * @param bool  $update
+     * @param mixed $where
+     * @return $this
+     */
+    public function isUpdate($update = true, $where = null)
+    {
+        $this->isUpdate = $update;
+        if (!empty($where)) {
+            $this->updateWhere = $where;
+        }
+        return $this;
+    }
+
+    /**
+     * 数据自动完成
+     * @access public
+     * @param array $auto 要自动更新的字段列表
+     * @return void
+     */
+    protected function autoCompleteData($auto = [])
+    {
+        foreach ($auto as $field => $value) {
+            if (is_integer($field)) {
+                $field = $value;
+                $value = null;
+            }
+            if (!in_array($field, $this->change)) {
+                $this->setAttr($field, !is_null($value) ? $value : (isset($this->data[$field]) ? $this->data[$field] : $value));
+            }
+        }
+    }
+
+    /**
+     * 删除当前的记录
+     * @access public
+     * @return integer
+     */
+    public function delete()
+    {
+        if (false === $this->trigger('before_delete', $this)) {
+            return false;
+        }
+
+        // 删除条件
+        $pk = $this->getPk();
+        if (is_string($pk) && isset($this->data[$pk])) {
+            $where = [$pk => $this->data[$pk]];
+        } elseif (!empty($this->updateWhere)) {
+            $where = $this->updateWhere;
+        } else {
+            $where = null;
+        }
+
+        // 删除当前模型数据
+        $result = $this->db()->where($where)->delete();
+
+        // 关联删除
+        if (!empty($this->relationWrite)) {
+            foreach ($this->relationWrite as $key => $name) {
+                $name  = is_numeric($key) ? $name : $key;
+                $model = $this->getAttr($name);
+                if ($model instanceof Model) {
+                    $model->delete();
+                }
+            }
+        }
+
+        $this->trigger('after_delete', $this);
+        return $result;
+    }
+
+    /**
+     * 设置自动完成的字段（ 规则通过修改器定义）
+     * @access public
+     * @param array $fields 需要自动完成的字段
+     * @return $this
+     */
+    public function auto($fields)
+    {
+        $this->auto = $fields;
+        return $this;
+    }
+
+    /**
+     * 设置字段验证
+     * @access public
+     * @param array|string|bool $rule  验证规则 true表示自动读取验证器类
+     * @param array             $msg   提示信息
+     * @param bool              $batch 批量验证
+     * @return $this
+     */
+    public function validate($rule = true, $msg = [], $batch = false)
+    {
+        if (is_array($rule)) {
+            $this->validate = [
+                'rule' => $rule,
+                'msg'  => $msg,
+            ];
+        } else {
+            $this->validate = true === $rule ? $this->name : $rule;
+        }
+        $this->batchValidate = $batch;
+        return $this;
+    }
+
+    /**
+     * 设置验证失败后是否抛出异常
+     * @access public
+     * @param bool $fail 是否抛出异常
+     * @return $this
+     */
+    public function validateFailException($fail = true)
+    {
+        $this->failException = $fail;
+        return $this;
+    }
+
+    /**
+     * 自动验证数据
+     * @access protected
+     * @param array $data  验证数据
+     * @param mixed $rule  验证规则
+     * @param bool  $batch 批量验证
+     * @return bool
+     */
+    protected function validateData($data, $rule = null, $batch = null)
+    {
+        $info = is_null($rule) ? $this->validate : $rule;
+
+        if (!empty($info)) {
+            if (is_array($info)) {
+                $validate = Loader::validate();
+                $validate->rule($info['rule']);
+                $validate->message($info['msg']);
+            } else {
+                $name = is_string($info) ? $info : $this->name;
+                if (strpos($name, '.')) {
+                    list($name, $scene) = explode('.', $name);
+                }
+                $validate = Loader::validate($name);
+                if (!empty($scene)) {
+                    $validate->scene($scene);
+                }
+            }
+            $batch = is_null($batch) ? $this->batchValidate : $batch;
+
+            if (!$validate->batch($batch)->check($data)) {
+                $this->error = $validate->getError();
+                if ($this->failException) {
+                    throw new ValidateException($this->error);
+                } else {
+                    return false;
+                }
+            }
+            $this->validate = null;
+        }
+        return true;
     }
 
     /**
@@ -1228,740 +1208,709 @@ class Model
     }
 
     /**
-     * 返回数据库的错误信息
+     * 注册回调方法
      * @access public
-     * @return string
+     * @param string   $event    事件名
+     * @param callable $callback 回调方法
+     * @param bool     $override 是否覆盖
+     * @return void
      */
-    public function getDbError()
+    public static function event($event, $callback, $override = false)
     {
-        return $this->db->getError();
-    }
-
-    /**
-     * 返回最后插入的ID
-     * @access public
-     * @return string
-     */
-    public function getLastInsID()
-    {
-        return $this->db->getLastInsID();
-    }
-
-    /**
-     * 返回最后执行的sql语句
-     * @access public
-     * @return string
-     */
-    public function getLastSql()
-    {
-        return $this->db->getLastSql($this->name);
-    }
-
-    /**
-     * 获取当前主键名称
-     * @access public
-     * @param string $tableName  数据表名 留空自动获取
-     * @return mixed
-     */
-    public function getPk($tableName = '')
-    {
-        if (is_null($this->pk)) {
-            $this->pk = $this->getTableInfo('pk', $tableName);
+        $class = get_called_class();
+        if ($override) {
+            self::$event[$class][$event] = [];
         }
-        return $this->pk;
+        self::$event[$class][$event][] = $callback;
     }
 
     /**
-     * 获取当前字段信息
+     * 触发事件
+     * @access protected
+     * @param string $event  事件名
+     * @param mixed  $params 传入参数（引用）
+     * @return bool
+     */
+    protected function trigger($event, &$params)
+    {
+        if (isset(self::$event[$this->class][$event])) {
+            foreach (self::$event[$this->class][$event] as $callback) {
+                if (is_callable($callback)) {
+                    $result = call_user_func_array($callback, [ & $params]);
+                    if (false === $result) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 写入数据
      * @access public
-     * @param string $tableName  数据表名 留空自动获取
+     * @param array      $data  数据数组
+     * @param array|true $field 允许字段
+     * @return $this
+     */
+    public static function create($data = [], $field = null)
+    {
+        $model = new static();
+        if (!empty($field)) {
+            $model->allowField($field);
+        }
+        $model->isUpdate(false)->save($data, []);
+        return $model;
+    }
+
+    /**
+     * 更新数据
+     * @access public
+     * @param array      $data  数据数组
+     * @param array      $where 更新条件
+     * @param array|true $field 允许字段
+     * @return $this
+     */
+    public static function update($data = [], $where = [], $field = null)
+    {
+        $model = new static();
+        if (!empty($field)) {
+            $model->allowField($field);
+        }
+        $result = $model->isUpdate(true)->save($data, $where);
+        return $model;
+    }
+
+    /**
+     * 查找单条记录
+     * @access public
+     * @param mixed        $data  主键值或者查询条件（闭包）
+     * @param array|string $with  关联预查询
+     * @param bool         $cache 是否缓存
+     * @return static
+     * @throws exception\DbException
+     */
+    public static function get($data = null, $with = [], $cache = false)
+    {
+        if (true === $with || is_int($with)) {
+            $cache = $with;
+            $with  = [];
+        }
+        $query = static::parseQuery($data, $with, $cache);
+        return $query->find($data);
+    }
+
+    /**
+     * 查找所有记录
+     * @access public
+     * @param mixed        $data  主键列表或者查询条件（闭包）
+     * @param array|string $with  关联预查询
+     * @param bool         $cache 是否缓存
+     * @return static[]|false
+     * @throws exception\DbException
+     */
+    public static function all($data = null, $with = [], $cache = false)
+    {
+        if (true === $with || is_int($with)) {
+            $cache = $with;
+            $with  = [];
+        }
+        $query = static::parseQuery($data, $with, $cache);
+        return $query->select($data);
+    }
+
+    /**
+     * 分析查询表达式
+     * @access public
+     * @param mixed  $data  主键列表或者查询条件（闭包）
+     * @param string $with  关联预查询
+     * @param bool   $cache 是否缓存
+     * @return Query
+     */
+    protected static function parseQuery(&$data, $with, $cache)
+    {
+        $result = self::with($with)->cache($cache);
+        if (is_array($data) && key($data) !== 0) {
+            $result = $result->where($data);
+            $data   = null;
+        } elseif ($data instanceof \Closure) {
+            call_user_func_array($data, [ & $result]);
+            $data = null;
+        } elseif ($data instanceof Query) {
+            $result = $data->with($with)->cache($cache);
+            $data   = null;
+        }
+        return $result;
+    }
+
+    /**
+     * 删除记录
+     * @access public
+     * @param mixed $data 主键列表 支持闭包查询条件
+     * @return integer 成功删除的记录数
+     */
+    public static function destroy($data)
+    {
+        $model = new static();
+        $query = $model->db();
+        if (is_array($data) && key($data) !== 0) {
+            $query->where($data);
+            $data = null;
+        } elseif ($data instanceof \Closure) {
+            call_user_func_array($data, [ & $query]);
+            $data = null;
+        } elseif (is_null($data)) {
+            return 0;
+        }
+        $resultSet = $query->select($data);
+        $count     = 0;
+        if ($resultSet) {
+            foreach ($resultSet as $data) {
+                $result = $data->delete();
+                $count += $result;
+            }
+        }
+        return $count;
+    }
+
+    /**
+     * 命名范围
+     * @access public
+     * @param string|array|\Closure $name 命名范围名称 逗号分隔
+     * @internal  mixed                 ...$params 参数调用
+     * @return Model|Query
+     */
+    public static function scope($name)
+    {
+        if ($name instanceof Query) {
+            return $name;
+        }
+        $model     = new static();
+        $params    = func_get_args();
+        $params[0] = $model->db();
+        if ($name instanceof \Closure) {
+            call_user_func_array($name, $params);
+        } elseif (is_string($name)) {
+            $name = explode(',', $name);
+        }
+        if (is_array($name)) {
+            foreach ($name as $scope) {
+                $method = 'scope' . trim($scope);
+                if (method_exists($model, $method)) {
+                    call_user_func_array([$model, $method], $params);
+                }
+            }
+        }
+        return $model;
+    }
+
+    /**
+     * 设置是否使用全局查询范围
+     * @param bool $use 是否启用全局查询范围
+     * @access public
+     * @return Model
+     */
+    public static function useGlobalScope($use)
+    {
+        $model      = new static();
+        static::$db = $model->db($use);
+        return $model;
+    }
+
+    /**
+     * 根据关联条件查询当前模型
+     * @access public
+     * @param string  $relation 关联方法名
+     * @param mixed   $operator 比较操作符
+     * @param integer $count    个数
+     * @param string  $id       关联表的统计字段
+     * @return Relation|Query
+     */
+    public static function has($relation, $operator = '>=', $count = 1, $id = '*')
+    {
+        $relation = (new static())->$relation();
+        if (is_array($operator) || $operator instanceof \Closure) {
+            return $relation->hasWhere($operator);
+        }
+        return $relation->has($operator, $count, $id);
+    }
+
+    /**
+     * 根据关联条件查询当前模型
+     * @access public
+     * @param string $relation 关联方法名
+     * @param mixed  $where    查询条件（数组或者闭包）
+     * @return Relation|Query
+     */
+    public static function hasWhere($relation, $where = [])
+    {
+        return (new static())->$relation()->hasWhere($where);
+    }
+
+    /**
+     * 解析模型的完整命名空间
+     * @access public
+     * @param string $model 模型名（或者完整类名）
+     * @return string
+     */
+    protected function parseModel($model)
+    {
+        if (false === strpos($model, '\\')) {
+            $path = explode('\\', get_called_class());
+            array_pop($path);
+            array_push($path, Loader::parseName($model, 1));
+            $model = implode('\\', $path);
+        }
+        return $model;
+    }
+
+    /**
+     * 查询当前模型的关联数据
+     * @access public
+     * @param string|array $relations 关联名
+     * @return $this
+     */
+    public function relationQuery($relations)
+    {
+        if (is_string($relations)) {
+            $relations = explode(',', $relations);
+        }
+
+        foreach ($relations as $key => $relation) {
+            $subRelation = '';
+            $closure     = null;
+            if ($relation instanceof \Closure) {
+                // 支持闭包查询过滤关联条件
+                $closure  = $relation;
+                $relation = $key;
+            }
+            if (is_array($relation)) {
+                $subRelation = $relation;
+                $relation    = $key;
+            } elseif (strpos($relation, '.')) {
+                list($relation, $subRelation) = explode('.', $relation, 2);
+            }
+            $method                = Loader::parseName($relation, 1, false);
+            $this->data[$relation] = $this->$method()->getRelation($subRelation, $closure);
+        }
+        return $this;
+    }
+
+    /**
+     * 预载入关联查询 返回数据集
+     * @access public
+     * @param array  $resultSet 数据集
+     * @param string $relation  关联名
      * @return array
      */
-    public function getFields($tableName = '')
+    public function eagerlyResultSet(&$resultSet, $relation)
     {
-        if (empty($this->fields)) {
-            $this->fields = $this->getTableInfo('fields', $tableName);
+        $relations = is_string($relation) ? explode(',', $relation) : $relation;
+        foreach ($relations as $key => $relation) {
+            $subRelation = '';
+            $closure     = false;
+            if ($relation instanceof \Closure) {
+                $closure  = $relation;
+                $relation = $key;
+            }
+            if (is_array($relation)) {
+                $subRelation = $relation;
+                $relation    = $key;
+            } elseif (strpos($relation, '.')) {
+                list($relation, $subRelation) = explode('.', $relation, 2);
+            }
+            $relation = Loader::parseName($relation, 1, false);
+            $this->$relation()->eagerlyResultSet($resultSet, $relation, $subRelation, $closure);
         }
-        return $this->fields;
     }
 
     /**
-     * 获取数据表信息
+     * 预载入关联查询 返回模型对象
      * @access public
-     * @param string $fetch 获取信息类型 包括 fields type bind pk
-     * @param string $tableName  数据表名 留空自动获取
+     * @param Model  $result   数据对象
+     * @param string $relation 关联名
+     * @return Model
+     */
+    public function eagerlyResult(&$result, $relation)
+    {
+        $relations = is_string($relation) ? explode(',', $relation) : $relation;
+
+        foreach ($relations as $key => $relation) {
+            $subRelation = '';
+            $closure     = false;
+            if ($relation instanceof \Closure) {
+                $closure  = $relation;
+                $relation = $key;
+            }
+            if (is_array($relation)) {
+                $subRelation = $relation;
+                $relation    = $key;
+            } elseif (strpos($relation, '.')) {
+                list($relation, $subRelation) = explode('.', $relation, 2);
+            }
+            $relation = Loader::parseName($relation, 1, false);
+            $this->$relation()->eagerlyResult($result, $relation, $subRelation, $closure);
+        }
+    }
+
+    /**
+     * 关联统计
+     * @access public
+     * @param Model        $result   数据对象
+     * @param string|array $relation 关联名
+     * @return void
+     */
+    public function relationCount(&$result, $relation)
+    {
+        $relations = is_string($relation) ? explode(',', $relation) : $relation;
+
+        foreach ($relations as $key => $relation) {
+            $closure = false;
+            if ($relation instanceof \Closure) {
+                $closure  = $relation;
+                $relation = $key;
+            } elseif (is_string($key)) {
+                $name     = $relation;
+                $relation = $key;
+            }
+            $relation = Loader::parseName($relation, 1, false);
+            $count    = $this->$relation()->relationCount($result, $closure);
+            if (!isset($name)) {
+                $name = Loader::parseName($relation) . '_count';
+            }
+            $result->setAttr($name, $count);
+        }
+    }
+
+    /**
+     * 获取模型的默认外键名
+     * @access public
+     * @param string $name 模型名
+     * @return string
+     */
+    protected function getForeignKey($name)
+    {
+        if (strpos($name, '\\')) {
+            $name = basename(str_replace('\\', '/', $name));
+        }
+        return Loader::parseName($name) . '_id';
+    }
+
+    /**
+     * HAS ONE 关联定义
+     * @access public
+     * @param string $model      模型名
+     * @param string $foreignKey 关联外键
+     * @param string $localKey   关联主键
+     * @param array  $alias      别名定义（已经废弃）
+     * @param string $joinType   JOIN类型
+     * @return HasOne
+     */
+    public function hasOne($model, $foreignKey = '', $localKey = '', $alias = [], $joinType = 'INNER')
+    {
+        // 记录当前关联信息
+        $model      = $this->parseModel($model);
+        $localKey   = $localKey ?: $this->getPk();
+        $foreignKey = $foreignKey ?: $this->getForeignKey($this->name);
+        return new HasOne($this, $model, $foreignKey, $localKey, $joinType);
+    }
+
+    /**
+     * BELONGS TO 关联定义
+     * @access public
+     * @param string $model      模型名
+     * @param string $foreignKey 关联外键
+     * @param string $localKey   关联主键
+     * @param array  $alias      别名定义（已经废弃）
+     * @param string $joinType   JOIN类型
+     * @return BelongsTo
+     */
+    public function belongsTo($model, $foreignKey = '', $localKey = '', $alias = [], $joinType = 'INNER')
+    {
+        // 记录当前关联信息
+        $model      = $this->parseModel($model);
+        $foreignKey = $foreignKey ?: $this->getForeignKey($model);
+        $localKey   = $localKey ?: (new $model)->getPk();
+        return new BelongsTo($this, $model, $foreignKey, $localKey, $joinType);
+    }
+
+    /**
+     * HAS MANY 关联定义
+     * @access public
+     * @param string $model      模型名
+     * @param string $foreignKey 关联外键
+     * @param string $localKey   关联主键
+     * @return HasMany
+     */
+    public function hasMany($model, $foreignKey = '', $localKey = '')
+    {
+        // 记录当前关联信息
+        $model      = $this->parseModel($model);
+        $localKey   = $localKey ?: $this->getPk();
+        $foreignKey = $foreignKey ?: $this->getForeignKey($this->name);
+        return new HasMany($this, $model, $foreignKey, $localKey);
+    }
+
+    /**
+     * HAS MANY 远程关联定义
+     * @access public
+     * @param string $model      模型名
+     * @param string $through    中间模型名
+     * @param string $foreignKey 关联外键
+     * @param string $throughKey 关联外键
+     * @param string $localKey   关联主键
+     * @return HasManyThrough
+     */
+    public function hasManyThrough($model, $through, $foreignKey = '', $throughKey = '', $localKey = '')
+    {
+        // 记录当前关联信息
+        $model      = $this->parseModel($model);
+        $through    = $this->parseModel($through);
+        $localKey   = $localKey ?: $this->getPk();
+        $foreignKey = $foreignKey ?: $this->getForeignKey($this->name);
+        $throughKey = $throughKey ?: $this->getForeignKey($through);
+        return new HasManyThrough($this, $model, $through, $foreignKey, $throughKey, $localKey);
+    }
+
+    /**
+     * BELONGS TO MANY 关联定义
+     * @access public
+     * @param string $model      模型名
+     * @param string $table      中间表名
+     * @param string $foreignKey 关联外键
+     * @param string $localKey   当前模型关联键
+     * @return BelongsToMany
+     */
+    public function belongsToMany($model, $table = '', $foreignKey = '', $localKey = '')
+    {
+        // 记录当前关联信息
+        $model      = $this->parseModel($model);
+        $name       = Loader::parseName(basename(str_replace('\\', '/', $model)));
+        $table      = $table ?: $this->db(false)->getTable(Loader::parseName($this->name) . '_' . $name);
+        $foreignKey = $foreignKey ?: $name . '_id';
+        $localKey   = $localKey ?: $this->getForeignKey($this->name);
+        return new BelongsToMany($this, $model, $table, $foreignKey, $localKey);
+    }
+
+    /**
+     * MORPH  MANY 关联定义
+     * @access public
+     * @param string       $model 模型名
+     * @param string|array $morph 多态字段信息
+     * @param string       $type  多态类型
+     * @return MorphMany
+     */
+    public function morphMany($model, $morph = null, $type = '')
+    {
+        // 记录当前关联信息
+        $model = $this->parseModel($model);
+        if (is_null($morph)) {
+            $trace = debug_backtrace(false, 2);
+            $morph = Loader::parseName($trace[1]['function']);
+        }
+        $type = $type ?: Loader::parseName($this->name);
+        if (is_array($morph)) {
+            list($morphType, $foreignKey) = $morph;
+        } else {
+            $morphType  = $morph . '_type';
+            $foreignKey = $morph . '_id';
+        }
+        return new MorphMany($this, $model, $foreignKey, $morphType, $type);
+    }
+
+    /**
+     * MORPH TO 关联定义
+     * @access public
+     * @param string|array $morph 多态字段信息
+     * @param array        $alias 多态别名定义
+     * @return MorphTo
+     */
+    public function morphTo($morph = null, $alias = [])
+    {
+        if (is_null($morph)) {
+            $trace = debug_backtrace(false, 2);
+            $morph = Loader::parseName($trace[1]['function']);
+        }
+        // 记录当前关联信息
+        if (is_array($morph)) {
+            list($morphType, $foreignKey) = $morph;
+        } else {
+            $morphType  = $morph . '_type';
+            $foreignKey = $morph . '_id';
+        }
+        return new MorphTo($this, $morphType, $foreignKey, $alias);
+    }
+
+    public function __call($method, $args)
+    {
+        if (isset(static::$db)) {
+            $query      = static::$db;
+            static::$db = null;
+        } else {
+            $query = $this->db();
+        }
+
+        if (method_exists($this, 'scope' . $method)) {
+            // 动态调用命名范围
+            $method = 'scope' . $method;
+            array_unshift($args, $query);
+            call_user_func_array([$this, $method], $args);
+            return $this;
+        } else {
+            return call_user_func_array([$query, $method], $args);
+        }
+    }
+
+    public static function __callStatic($method, $params)
+    {
+        if (isset(static::$db)) {
+            $query      = static::$db;
+            static::$db = null;
+        } else {
+            $query = (new static())->db();
+        }
+
+        return call_user_func_array([$query, $method], $params);
+    }
+
+    /**
+     * 修改器 设置数据对象的值
+     * @access public
+     * @param string $name  名称
+     * @param mixed  $value 值
+     * @return void
+     */
+    public function __set($name, $value)
+    {
+        $this->setAttr($name, $value);
+    }
+
+    /**
+     * 获取器 获取数据对象的值
+     * @access public
+     * @param string $name 名称
      * @return mixed
      */
-    public function getTableInfo($fetch = '', $tableName = '')
+    public function __get($name)
     {
-        if (!$tableName) {
-            $tableName = isset($this->options['table']) ? $this->options['table'] : $this->getTableName();
-        }
-        if (is_array($tableName)) {
-            $tableName = key($tableName) ?: current($tableName);
-        }
-        if (strpos($tableName, ',')) {
-            // 多表不获取字段信息
+        return $this->getAttr($name);
+    }
+
+    /**
+     * 检测数据对象的值
+     * @access public
+     * @param string $name 名称
+     * @return boolean
+     */
+    public function __isset($name)
+    {
+        try {
+            if (array_key_exists($name, $this->data)) {
+                return true;
+            } else {
+                $this->getAttr($name);
+                return true;
+            }
+        } catch (InvalidArgumentException $e) {
             return false;
         }
-        $guid   = md5($tableName);
-        $result = Cache::get($guid);
-        if (!$result) {
-            $info = $this->db->getFields($tableName);
-            // 字段大小写转换
-            switch ($this->attrCase) {
-                case \PDO::CASE_LOWER:
-                    $info = array_change_key_case($info);
-                    break;
-                case \PDO::CASE_UPPER:
-                    $info = array_change_key_case($info, CASE_UPPER);
-                    break;
-                case \PDO::CASE_NATURAL:
-                default:
-                    // 不做转换
-            }
 
-            $fields = array_keys($info);
-            $bind   = $type   = [];
-            foreach ($info as $key => $val) {
-                // 记录字段类型
-                $type[$key] = $val['type'];
-                if (preg_match('/(int|double|float|decimal|real|numeric|serial)/is', $val['type'])) {
-                    $bind[$key] = \PDO::PARAM_INT;
-                } elseif (preg_match('/bool/is', $val['type'])) {
-                    $bind[$key] = \PDO::PARAM_BOOL;
-                } else {
-                    $bind[$key] = \PDO::PARAM_STR;
-                }
-                if (!empty($val['primary'])) {
-                    $pk[] = $key;
-                }
-            }
-            if (isset($pk)) {
-                // 设置主键
-                $pk = count($pk) > 1 ? $pk : $pk[0];
-            } else {
-                $pk = null;
-            }
-            // 记录字段类型信息
-            $result = ['fields' => $fields, 'bind' => $bind, 'type' => $type, 'pk' => $pk];
-            !APP_DEBUG && Cache::set($guid, $result, 0);
-        }
-        return $fetch ? $result[$fetch] : $result;
     }
 
     /**
-     * SQL查询
+     * 销毁数据对象的值
      * @access public
-     * @param string $sql  SQL指令
-     * @param array $bind 参数绑定
-     * @return mixed
+     * @param string $name 名称
+     * @return void
      */
-    public function query($sql, $bind = [])
+    public function __unset($name)
     {
-        $sql = $this->parseSql($sql);
-        return $this->db->query($sql, $bind);
+        unset($this->data[$name]);
+    }
+
+    public function __toString()
+    {
+        return $this->toJson();
+    }
+
+    // JsonSerializable
+    public function jsonSerialize()
+    {
+        return $this->toArray();
+    }
+
+    // ArrayAccess
+    public function offsetSet($name, $value)
+    {
+        $this->setAttr($name, $value);
+    }
+
+    public function offsetExists($name)
+    {
+        return $this->__isset($name);
+    }
+
+    public function offsetUnset($name)
+    {
+        $this->__unset($name);
+    }
+
+    public function offsetGet($name)
+    {
+        return $this->getAttr($name);
     }
 
     /**
-     * 执行SQL语句
-     * @access public
-     * @param string $sql  SQL指令
-     * @param array $bind 参数绑定
-     * @return false | integer
+     * 解序列化后处理
      */
-    public function execute($sql, $bind = [])
+    public function __wakeup()
     {
-        $sql = $this->parseSql($sql);
-        return $this->db->execute($sql, $bind);
+        $this->initialize();
     }
 
     /**
-     * 解析SQL语句
-     * @access public
-     * @param string $sql  SQL指令
-     * @return string
+     * 模型事件快捷方法
+     * @param      $callback
+     * @param bool $override
      */
-    protected function parseSql($sql)
+    protected static function beforeInsert($callback, $override = false)
     {
-        // 分析表达式
-        $sql = strtr($sql, ['__TABLE__' => $this->getTableName(), '__PREFIX__' => $this->tablePrefix]);
-        $sql = $this->parseSqlTable($sql);
-        $this->db->setModel($this->name);
-        return $sql;
+        self::event('before_insert', $callback, $override);
     }
 
-    /**
-     * 设置数据对象值
-     * @access public
-     * @param mixed $data 数据
-     * @return Model
-     * @throws \think\Exception
-     */
-    public function data($data = '')
+    protected static function afterInsert($callback, $override = false)
     {
-        if ('' === $data && !empty($this->data)) {
-            return $this->data;
-        }
-        if (is_object($data)) {
-            $data = get_object_vars($data);
-        } elseif (is_string($data)) {
-            parse_str($data, $data);
-        } elseif (!is_array($data)) {
-            throw new Exception('data type invalid', 10300);
-        }
-        $this->data = $data;
-        return $this;
+        self::event('after_insert', $callback, $override);
     }
 
-    /**
-     * 查询SQL组装 join
-     * @access public
-     * @param mixed $join
-     * @param string $type JOIN类型
-     * @return Model
-     */
-    public function _join($join, $type = 'INNER')
+    protected static function beforeUpdate($callback, $override = false)
     {
-        if (is_array($join)) {
-            foreach ($join as $key => &$_join) {
-                $_join = $this->parseSqlTable($_join);
-                $_join = false !== stripos($_join, 'JOIN') ? $_join : $type . ' JOIN ' . $_join;
-            }
-            $this->options['join'] = $join;
-        } elseif (!empty($join)) {
-            $join                    = $this->parseSqlTable($join);
-            $this->options['join'][] = false !== stripos($join, 'JOIN') ? $join : $type . ' JOIN ' . $join;
-        }
-        return $this;
+        self::event('before_update', $callback, $override);
     }
 
-    /**
-     * 查询SQL组装 join
-     * @access public
-     * @param mixed $join 关联的表名
-     * @param mixed $condition 条件
-     * @param string $type JOIN类型
-     * @return Model
-     */
-    public function join($join, $condition = null, $type = 'INNER')
+    protected static function afterUpdate($callback, $override = false)
     {
-        if (empty($join)) {
-            return $this;
-        }
-
-        if (empty($condition)) {
-            if (is_array($join) && is_array(current($join))) {
-                // 如果为组数，则循环调用join
-                foreach ($join as $key => $value) {
-                    if (is_array($value) && 2 <= count($value)) {
-                        $this->join($value[0], $value[1], isset($value[2]) ? $value[2] : $type);
-                    }
-                }
-            } else {
-                $this->_join($join, $condition); // 兼容原来的join写法
-            }
-        } elseif (in_array(strtoupper($condition), ['INNER', 'LEFT', 'RIGHT', 'ALL'])) {
-            $this->_join($join, $condition); // 兼容原来的join写法
-        } else {
-            $prefix = $this->tablePrefix;
-            // 传入的表名为数组
-            if (is_array($join)) {
-                if (0 !== key($join)) {
-                    // 键名为表名，键值作为表的别名
-                    $table = key($join) . ' ' . current($join);
-                } else {
-                    $table = current($join);
-                }
-                if (isset($join[1])) {
-                    // 第二个元素为字符串则把第二元素作为表前缀
-                    if (is_string($join[1])) {
-                        $table = $join[1] . $table;
-                    }
-                } else {
-                    // 加上默认的表前缀
-                    $table = $prefix . $table;
-                }
-            } else {
-                $join = trim($join);
-                if (0 === strpos($join, '__')) {
-                    $table = $this->parseSqlTable($join);
-                } elseif (false === strpos($join, '(') && !empty($prefix) && 0 !== strpos($join, $prefix)) {
-                    // 传入的表名中不带有'('并且不以默认的表前缀开头时加上默认的表前缀
-                    $table = $prefix . $join;
-                } else {
-                    $table = $join;
-                }
-            }
-            if (is_array($condition)) {
-                $condition = implode(' AND ', $condition);
-            }
-            $this->options['join'][] = strtoupper($type) . ' JOIN ' . $table . ' ON ' . $condition;
-        }
-        return $this;
+        self::event('after_update', $callback, $override);
     }
 
-    /**
-     * 查询SQL组装 union
-     * @access public
-     * @param mixed $union
-     * @param boolean $all
-     * @return Model
-     * @throws \think\Exception
-     */
-    public function union($union, $all = false)
+    protected static function beforeWrite($callback, $override = false)
     {
-        if (empty($union)) {
-            return $this;
-        }
-
-        if ($all) {
-            $this->options['union']['_all'] = true;
-        }
-        if (is_object($union)) {
-            $union = get_object_vars($union);
-        } elseif (is_string($union)) {
-            // 转换union表达式
-            $union = (array) $union;
-        }
-        if (is_array($union)) {
-            if (isset($union[0])) {
-                foreach ($union as &$val) {
-                    $val = $this->parseSqlTable($val);
-                }
-                $this->options['union'] = isset($this->options['union']) ? array_merge($this->options['union'], $union) : $union;
-            } else {
-                $this->options['union'][] = $union;
-            }
-        } else {
-            throw new Exception('data type invalid', 10300);
-        }
-        return $this;
+        self::event('before_write', $callback, $override);
     }
 
-    /**
-     * 查询缓存
-     * @access public
-     * @param mixed $key
-     * @param integer $expire
-     * @param string $type
-     * @return Model
-     */
-    public function cache($key = true, $expire = null, $type = '')
+    protected static function afterWrite($callback, $override = false)
     {
-        // 增加快捷调用方式 cache(10) 等同于 cache(true, 10)
-        if (is_numeric($key) && is_null($expire)) {
-            $expire = $key;
-            $key    = true;
-        }
-        if (false !== $key) {
-            $this->options['cache'] = ['key' => $key, 'expire' => $expire, 'type' => $type];
-        }
-        return $this;
+        self::event('after_write', $callback, $override);
     }
 
-    /**
-     * 指定查询字段 支持字段排除
-     * @access public
-     * @param mixed $field
-     * @param boolean $except 是否排除
-     * @return Model
-     */
-    public function field($field, $except = false)
+    protected static function beforeDelete($callback, $override = false)
     {
-        if (true === $field) {
-            // 获取全部字段
-            $fields = $this->getFields();
-            $field  = $fields ?: '*';
-        } elseif ($except) {
-            // 字段排除
-            if (is_string($field)) {
-                $field = explode(',', $field);
-            }
-            $fields = $this->getFields();
-            $field  = $fields ? array_diff($fields, $field) : $field;
-        }
-        $this->options['field'] = $field;
-        return $this;
+        self::event('before_delete', $callback, $override);
     }
 
-    /**
-     * 调用命名范围
-     * @access public
-     * @param mixed $scope 命名范围名称 支持多个 和直接定义
-     * @param array $args 参数
-     * @return Model
-     */
-    public function scope($scope = '', $args = null)
+    protected static function afterDelete($callback, $override = false)
     {
-        if ('' === $scope) {
-            if (isset($this->scope['default'])) {
-                // 默认的命名范围
-                $options = $this->scope['default'];
-            } else {
-                return $this;
-            }
-        } elseif (is_string($scope)) {
-            // 支持多个命名范围调用 用逗号分割
-            $scopes  = explode(',', $scope);
-            $options = [];
-            foreach ($scopes as $name) {
-                if (!isset($this->scope[$name])) {
-                    continue;
-                }
-                $options = array_merge($options, $this->scope[$name]);
-            }
-            if (!empty($args) && is_array($args)) {
-                $options = array_merge($options, $args);
-            }
-        } else {
-            // 直接传入命名范围定义
-            $options = $scope;
-        }
-
-        if (is_array($options) && !empty($options)) {
-            $this->options = array_merge($this->options, array_change_key_case($options));
-        }
-        return $this;
+        self::event('after_delete', $callback, $override);
     }
 
-    /**
-     * 指定查询条件
-     * @access public
-     * @param mixed $where 条件表达式
-     * @return Model
-     */
-    public function where($where)
-    {
-        if (is_string($where) && '' != $where) {
-            $map            = [];
-            $map['_string'] = $where;
-            $where          = $map;
-        }
-        if (isset($this->options['where'])) {
-            $this->options['where'] = array_merge($this->options['where'], $where);
-        } else {
-            $this->options['where'] = $where;
-        }
-        return $this;
-    }
-
-    /**
-     * 指定查询数量
-     * @access public
-     * @param mixed $offset 起始位置
-     * @param mixed $length 查询数量
-     * @return Model
-     */
-    public function limit($offset, $length = null)
-    {
-        if (is_null($length) && strpos($offset, ',')) {
-            list($offset, $length) = explode(',', $offset);
-        }
-        $this->options['limit'] = intval($offset) . ($length ? ',' . intval($length) : '');
-        return $this;
-    }
-
-    /**
-     * 指定分页
-     * @access public
-     * @param mixed $page 页数
-     * @param mixed $listRows 每页数量
-     * @return Model
-     */
-    public function page($page, $listRows = null)
-    {
-        if (is_null($listRows) && strpos($page, ',')) {
-            list($page, $listRows) = explode(',', $page);
-        }
-        $this->options['page'] = [intval($page), intval($listRows)];
-        return $this;
-    }
-
-    /**
-     * 指定数据表
-     * @access public
-     * @param string $table 表名
-     * @return Model
-     */
-    public function table($table)
-    {
-        if (is_array($table)) {
-            $this->options['table'] = $table;
-        } elseif (!empty($table)) {
-            $this->options['table'] = $this->parseSqlTable($table);
-        }
-        return $this;
-    }
-
-    /**
-     * USING支持 用于多表删除
-     * @access public
-     * @param mixed $using
-     * @return Model
-     */
-    public function using($using)
-    {
-        if (is_array($using)) {
-            $this->options['using'] = $using;
-        } elseif (!empty($using)) {
-            $this->options['using'] = $this->parseSqlTable($using);
-        }
-        return $this;
-    }
-
-    /**
-     * 指定排序 order('id','desc') 或者 order(['id'=>'desc','create_time'=>'desc'])
-     * @access public
-     * @param string|array $field 排序字段
-     * @param string $order 排序
-     * @return Model
-     */
-    public function order($field, $order = null)
-    {
-        if (!empty($field)) {
-            if (!is_array($field)) {
-                $field = empty($order) ? [$field] : [(string) $field => (string) $order];
-            }
-            $this->options['order'] = $field;
-        }
-        return $this;
-    }
-
-    /**
-     * 指定group查询
-     * @access public
-     * @param string $group GROUP
-     * @return Model
-     */
-    public function group($group)
-    {
-        $this->options['group'] = $group;
-        return $this;
-    }
-
-    /**
-     * 指定having查询
-     * @access public
-     * @param string $having having
-     * @return Model
-     */
-    public function having($having)
-    {
-        $this->options['having'] = $having;
-        return $this;
-    }
-
-    /**
-     * 指定查询lock
-     * @access public
-     * @param boolean $lock 是否lock
-     * @return Model
-     */
-    public function lock($lock = false)
-    {
-        $this->options['lock'] = $lock;
-        return $this;
-    }
-
-    /**
-     * 指定distinct查询
-     * @access public
-     * @param string $distinct 是否唯一
-     * @return Model
-     */
-    public function distinct($distinct)
-    {
-        $this->options['distinct'] = $distinct;
-        return $this;
-    }
-
-    /**
-     * 指定数据表别名
-     * @access public
-     * @param string $alias 数据表别名
-     * @return Model
-     */
-    public function alias($alias)
-    {
-        $this->options['alias'] = $alias;
-        return $this;
-    }
-
-    /**
-     * 指定写入过滤方法
-     * @access public
-     * @param string $filter 指定过滤方法
-     * @return Model
-     */
-    public function filter($filter)
-    {
-        $this->options['filter'] = $filter;
-        return $this;
-    }
-
-    /**
-     * 对数据集进行索引
-     * @access public
-     * @param string $index 索引名称
-     * @return Model
-     */
-    public function index($index)
-    {
-        $this->options['index'] = $index;
-        return $this;
-    }
-
-    /**
-     * 指定强制索引
-     * @access public
-     * @param string $force 索引名称
-     * @return Model
-     */
-    public function force($force)
-    {
-        $this->options['force'] = $force;
-        return $this;
-    }
-
-    /**
-     * 参数绑定
-     * @access public
-     * @param mixed $key  参数名
-     * @param mixed $value  绑定的变量及绑定参数
-     * @return Model
-     */
-    public function bind($key, $value = false)
-    {
-        if (is_array($key)) {
-            $this->options['bind'] = $key;
-        } else {
-            $num = func_num_args();
-            if ($num > 2) {
-                $params = func_get_args();
-                array_shift($params);
-                $this->options['bind'][$key] = $params;
-            } else {
-                $this->options['bind'][$key] = $value;
-            }
-        }
-        return $this;
-    }
-
-    /**
-     * 查询注释
-     * @access public
-     * @param string $comment 注释
-     * @return Model
-     */
-    public function comment($comment)
-    {
-        $this->options['comment'] = $comment;
-        return $this;
-    }
-
-    /**
-     * 获取执行的SQL语句
-     * @access public
-     * @param boolean $fetch 是否返回sql
-     * @return Model
-     */
-    public function fetchSql($fetch = true)
-    {
-        $this->options['fetch_sql'] = $fetch;
-        return $this;
-    }
-
-    /**
-     * 设置字段映射
-     * @access public
-     * @param mixed $map 映射名称或者映射数据
-     * @param string $name 映射的字段
-     * @return Model
-     */
-    public function map($map, $name = '')
-    {
-        if (is_array($map)) {
-            $this->map = array_merge($this->map, $map);
-        } else {
-            $this->map[$map] = $name;
-        }
-        return $this;
-    }
-
-    /**
-     * 设置字段验证
-     * @access public
-     * @param mixed $field 字段名或者验证规则 true表示自动读取
-     * @param array|null $rule 验证规则
-     * @return Model
-     */
-    public function validate($field = true, $rule = null)
-    {
-        if (is_array($field) || is_null($rule)) {
-            $this->options['validate'] = true === $field ? $this->name : $field;
-        } else {
-            $this->options['validate'][$field] = $rule;
-        }
-        return $this;
-    }
-
-    /**
-     * 设置字段完成
-     * @access public
-     * @param mixed $field 字段名或者自动完成规则 true 表示自动读取
-     * @param array|null $rule 完成规则
-     * @return Model
-     */
-    public function auto($field = true, $rule = null)
-    {
-        if (is_array($field) || is_null($rule)) {
-            $this->options['auto'] = true === $field ? $this->name : $field;
-        } else {
-            $this->options['auto'][$field] = $rule;
-        }
-        return $this;
-    }
-
-    /**
-     * 设置从主服务器读取数据
-     * @access public
-     * @return Model
-     */
-    public function master()
-    {
-        $this->options['master'] = true;
-        return $this;
-    }
-
-    /**
-     * 将SQL语句中的__TABLE_NAME__字符串替换成带前缀的表名（小写）
-     * @access protected
-     * @param string $sql sql语句
-     * @return string
-     */
-    protected function parseSqlTable($sql)
-    {
-        if (false !== strpos($sql, '__')) {
-            $prefix = $this->tablePrefix;
-            $sql    = preg_replace_callback("/__([A-Z0-9_-]+)__/sU", function ($match) use ($prefix) {
-                return $prefix . strtolower($match[1]);
-            }, $sql);
-        }
-        return $sql;
-    }
-
-    /**
-     * 获取属性值
-     * @access protected
-     * @param string $property 属性名
-     * @return mixed
-     */
-    public function getProperty($property)
-    {
-        if (property_exists($this, $property)) {
-            return $this->$property;
-        }
-        return null;
-    }
 }

@@ -1,69 +1,95 @@
 <?php
-// +----------------------------------------------------------------------
-// | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
-// +----------------------------------------------------------------------
-// | Author: 快乐是福 <815856515@qq.com>
-// +----------------------------------------------------------------------
-// | Date: 2016/4/23
-// +----------------------------------------------------------------------
-//公共函数类
-
-
 /**
- * 快捷生成sweetalert
- * @param      $_title
- * @param      $_text
- * @param      $_type
- * @param null $_url
- *
- * @return string
+ * Created by PhpStorm.
+ * User: 快乐是福<815856515@qq.com>
+ * Date: 2017/6/1
+ * Time: 13:25
  */
-function sweetAlert($_title,$_text,$_type,$_url = null)
-{
-    if(empty($_url)){
-        return 'swal("'.$_title.'", "'.$_text.'", "'.$_type.'");';
-    }else{
-        if($_url == 'REFERER'){
-            $_url='/';
-            if(isset($_SERVER['HTTP_REFERER'])){
-                $_url=$_SERVER['HTTP_REFERER'];
-            }
-        }
-        return 'swal({ title: "'.$_title.'",   text: "'.$_text.'",   type: "'.$_type.'",   showCancelButton: false,   confirmButtonColor: "#DD6B55",   confirmButtonText: "OK",   closeOnConfirm: false }, function(){   window.location.href="'.$_url.'"; });';
-    }
-}
-
 
 /**
  * 用户密码加密
- * @param $_pwd
- *
- * @return mixed
- */
-function md5Pwd($_pwd)
-{
-    return md5(md5($_pwd.'dad4553faf133as1d34fa34'));
-}
-/**
- * 获取随机字符串
+ * @param $password
  * @return string
  */
-function getSid()
+function passwordEncrypt($password)
 {
-    return md5(uniqid(mt_rand(),1).time());
+    return md5(md5($password . 'kldns') . '815856515');
 }
 
 /**
- * 
- * @param      $value
- * @param bool $html
- *
+ * 生成唯一用户身份识别码
  * @return string
  */
-function getHtmlCode($value,$html=false)
+function createSid()
+{
+    return md5(md5(uniqid() . rand(10000, 99999)) . md5(time()));
+}
+
+/**
+ * @param $group
+ * @return string
+ */
+function getUserGroupName($group)
+{
+    switch ($group) {
+        case 1:
+            return '普通';
+        case 2:
+            return '金';
+        case 4:
+            return '木';
+        case 8:
+            return '水';
+        case 16:
+            return '火';
+        case 32:
+            return '土';
+        default:
+            return '普通';
+    }
+}
+
+/**
+ * 操作用户金币函数
+ * @param $uid
+ * @param $coin
+ * @param null $remark
+ * @return bool
+ * @throws \think\Exception
+ */
+function updateCoin($uid, $coin, $remark = null)
+{
+    $query = db('users')->where('uid', $uid);
+    if ($coin < 0) {
+        $query->where('coin', '>=', abs($coin));
+    }
+    if ($sql = $query->setInc('coin', $coin)) {
+        return true;
+    }
+    return false;
+}
+
+/**
+ * @param $str
+ * @param int $index
+ * @param string $separator
+ * @return null
+ */
+function getStringIndex($str, $index = 0, $separator = ',')
+{
+    $arr = explode($separator, $str);
+    return isset($arr[$index]) ? $arr[$index] : null;
+}
+
+/**
+ * @param $value
+ * @param bool $html
+ * @return string
+ */
+function getHtmlCode($value, $html = false)
 {
     $value = stripslashes($value);
-    if($html){
+    if ($html) {
         $value = htmlspecialchars($value);
     }
     return $value;

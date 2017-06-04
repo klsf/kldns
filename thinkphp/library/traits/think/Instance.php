@@ -2,7 +2,7 @@
 // +----------------------------------------------------------------------
 // | ThinkPHP [ WE CAN DO IT JUST THINK ]
 // +----------------------------------------------------------------------
-// | Copyright (c) 2006~2016 http://thinkphp.cn All rights reserved.
+// | Copyright (c) 2006~2017 http://thinkphp.cn All rights reserved.
 // +----------------------------------------------------------------------
 // | Licensed ( http://www.apache.org/licenses/LICENSE-2.0 )
 // +----------------------------------------------------------------------
@@ -11,11 +11,16 @@
 
 namespace traits\think;
 
+use think\Exception;
+
 trait Instance
 {
     protected static $instance = null;
 
-    // 实例化（单例）
+    /**
+     * @param array $options
+     * @return static
+     */
     public static function instance($options = [])
     {
         if (is_null(self::$instance)) {
@@ -34,7 +39,7 @@ trait Instance
         if (0 === strpos($method, '_') && is_callable([self::$instance, $call])) {
             return call_user_func_array([self::$instance, $call], $params);
         } else {
-            throw new \think\Exception("not exists method:" . $method);
+            throw new Exception("method not exists:" . $method);
         }
     }
 }

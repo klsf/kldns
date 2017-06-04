@@ -1,0 +1,130 @@
+{extend name="admin/layout" /}
+{block name="app"}
+<div class="row">
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item"><a href="{:url('index')}" data-pjax="true">管理后台</a></li>
+            <li class="breadcrumb-item active">用户列表</li>
+        </ol>
+    </div>
+</div>
+<div class="row">
+    <div class="col-xl-12">
+        <div class="card bg-faded">
+            <div class="card-header">
+                <i class="fa fa-list"></i> 用户列表
+            </div>
+            <div class="card-block table-responsive">
+                <div class="list-group-item bg-grey" style="overflow: hidden;">
+                    <form id="searchForm" class="form-inline">
+                        <select class="form-control mr-1" v-on:change="getUserList" :value="s_group" v-model="s_group">
+                            <option value="0">所有</option>
+                            <option value="1">普通</option>
+                            <option value="2">金</option>
+                            <option value="4">木</option>
+                            <option value="8">水</option>
+                            <option value="16">火</option>
+                            <option value="32">土</option>
+                        </select>
+                        <div class="form-group mr-1">
+                            <input type="text" class="form-control" placeholder="输入用户名" v-on:change="getUserList"
+                                   :value="s_user" v-model="s_user">
+                        </div>
+                        <div class="form-group mr-1">
+                            <input type="number" class="form-control" placeholder="输入UID" v-on:change="getUserList"
+                                   :value="s_uid" v-model="s_uid">
+                        </div>
+                        <a class="btn btn-info" @click="getUserList"><i class="fa fa-search"></i> 搜索</a>
+                    </form>
+                </div>
+                <table class="table table-bordered">
+                    <thead>
+                    <tr>
+                        <th>UID</th>
+                        <td>用户名</td>
+                        <td>权限组</td>
+                        <td>金币</td>
+                        <td>注册时间</td>
+                        <td>操作</td>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr v-for="(user ,index) in userList">
+                        <th scope="row">#{{user.uid}}</th>
+                        <td>{{user.user}}</td>
+                        <td v-html="getUserGroup(user.group)"></td>
+                        <td>{{user.coin}}</td>
+                        <td>{{user.add_time}}</td>
+                        <td>
+                            <div style="width: 120px;margin: 0 auto;">
+                                <a class="btn-sm btn-warning" @click="updateUser(index)" data-toggle="modal"
+                                   href="#modal-updateUser" data-backdrop="false">修改</a>
+                                <a class="btn-sm btn-danger" @click="delUser(user.uid)">删除</a>
+                            </div>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card-footer">
+                <ul class="pagination" id="pagination" style="margin:  0 auto;"></ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal bg-info" id="modal-updateUser">
+    <div class="modal-dialog" role="document">
+        <form action="{:url('AdminAjax/user',['action'=>'update'])}" method="post" class="userForm">
+            <input type="hidden" name="uid" :value="userInfo.uid">
+            <div class="modal-content animated flipInX">
+                <div class="modal-header">
+                    <h5 class="modal-title">修改用户信息</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">UID</span>
+                            <input class="form-control" :value="userInfo.uid" disabled>
+                            <span class="input-group-addon">用户名</span>
+                            <input class="form-control" :value="userInfo.user" disabled>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">身份组</span>
+                            <select name="group" class="form-control" :value="userInfo.group">
+                                <option value="1">普通</option>
+                                <option value="2">金</option>
+                                <option value="4">木</option>
+                                <option value="8">水</option>
+                                <option value="16">火</option>
+                                <option value="32">土</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">金币</span>
+                            <input type="number" name="coin" class="form-control" :value="userInfo.coin"
+                                   datatype="n1-10">
+                            <span class="input-group-addon">个</span>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" placeholder="修改密码,不修改则留空" class="form-control" name="pwd">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-white" data-dismiss="modal">关闭</button>
+                    <button type="submit" class="btn btn-primary">保存</button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{/block}

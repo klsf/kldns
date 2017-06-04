@@ -1,0 +1,99 @@
+{extend name="admin/layout" /}
+{block name="app"}
+<div class="row">
+    <div class="col-xl-12 mt-2">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="/">首页</a></li>
+            <li class="breadcrumb-item"><a href="{:url('index')}" data-pjax="true">管理后台</a></li>
+            <li class="breadcrumb-item active">接口配置</li>
+        </ol>
+    </div>
+</div>
+<div class="row">
+    <div class="col-sm-12 col-md-6 mt-2">
+        <div class="card">
+            <div class="card-header">
+                DnsPod Token配置-[<a href="https://www.dnspod.cn/User/Security" target="_Blank">获取</a>]-[<a
+                    href="https://support.dnspod.cn/Kb/showarticle/tsid/227/" target="_Blank">帮助</a>]
+            </div>
+            <div class="card-block">
+                <form method="post" action="{:url('AdminAjax/api')}" class="ajaxForm">
+                    <input type="hidden" name="dns" value="dnspod">
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DnsPod的TokenID" value="{:getStringIndex(config('web_api_dnspod'),0)}" datatype="n4-6" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DnsPod的Token" value="{:getStringIndex(config('web_api_dnspod'),1)}" datatype="s32-32" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">保存配置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-6 mt-2">
+        <div class="card">
+            <div class="card-header">
+                AliYun AccessKey配置-[<a href="https://ak-console.aliyun.com/index#/accesskey" target="_Blank">获取</a>]
+            </div>
+            <div class="card-block">
+                <form method="post" action="{:url('AdminAjax/api')}" class="ajaxForm">
+                    <input type="hidden" name="dns" value="aliyun">
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="AccessKeyId" value="{:getStringIndex(config('web_api_aliyun'),0)}" datatype="s16-16" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="AccessKeySecret" value="{:getStringIndex(config('web_api_aliyun'),1)}" datatype="s30-30" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">保存配置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-6 mt-2">
+        <div class="card">
+            <div class="card-header">
+                CloudXNS API KEY配置-[<a href="https://www.cloudxns.net/AccountManage/apimanage.html" target="_Blank">获取</a>]
+            </div>
+            <div class="card-block">
+                <form method="post" action="{:url('AdminAjax/api')}" class="ajaxForm">
+                    <input type="hidden" name="dns" value="cloudxns">
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="CloudXNS的API KEY" value="{:getStringIndex(config('web_api_cloudxns'),0)}" datatype="s32-32" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="CloudXNS的SECRET KEY" value="{:getStringIndex(config('web_api_cloudxns'),1)}" datatype="s16-16" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">保存配置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <div class="col-sm-12 col-md-6 mt-2">
+        <div class="card">
+            <div class="card-header">
+                DNS.COM API KEY配置-[<a href="https://www.dns.com/member/apiSet" target="_Blank">获取</a>]
+            </div>
+            <div class="card-block">
+                <form method="post" action="{:url('AdminAjax/api')}" class="ajaxForm">
+                    <input type="hidden" name="dns" value="dnscom">
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DNS.COM的API KEY" value="{:getStringIndex(config('web_api_dnscom'),0)}" datatype="s32-32" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DNS.COM的API Secret" value="{:getStringIndex(config('web_api_dnscom'),1)}" datatype="s32-32" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">保存配置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{/block}
