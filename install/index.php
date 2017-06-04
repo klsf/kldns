@@ -66,7 +66,7 @@ if($action=='install'){
     <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport">
     <meta content="yes" name="apple-mobile-web-app-capable">
     <meta content="black" name="apple-mobile-web-app-status-bar-style">
-    <title>快乐离线秒赞系统-安装程序</title>
+    <title>快乐域名二级分发系统-安装程序</title>
     <link href="/assets/bootstrap-3.3.5/css/bootstrap.min.css" rel="stylesheet">
 </head>
 <body>
