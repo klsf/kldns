@@ -99,6 +99,9 @@
                                 {if condition="config('web_api_dnscom')"}
                                 <option value="dnscom">dnscom</option>
                                 {/if}
+                                {if condition="config('web_api_dnsla')"}
+                                <option value="dnsla">dnsla</option>
+                                {/if}
                             </select>
                             <a href="#" class="input-group-addon" @click="getApiDomainList">获取</a>
                         </div>

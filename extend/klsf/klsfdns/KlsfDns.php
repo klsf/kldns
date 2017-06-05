@@ -23,6 +23,8 @@ class KlsfDns
                 return DnsCom::getInstance($key[0], $key[1]);
             case "dnspod":
                 return DnsPod::getInstance($key[0], $key[1]);
+            case "dnsla":
+                return DnsLA::getInstance($key[0], $key[1]);
             default:
                 return DnsPod::getInstance($key[0], $key[1]);
         }

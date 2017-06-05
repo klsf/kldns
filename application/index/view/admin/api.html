@@ -95,5 +95,26 @@
             </div>
         </div>
     </div>
+    <div class="col-sm-12 col-md-6 mt-2">
+        <div class="card">
+            <div class="card-header">
+                DNS.LA API KEY配置-[<a href="https://www.dns.la/manage/APISet.aspx" target="_Blank">获取</a>]
+            </div>
+            <div class="card-block">
+                <form method="post" action="{:url('AdminAjax/api')}" class="ajaxForm">
+                    <input type="hidden" name="dns" value="dnsla">
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DNS.LA的APPIID" value="{:getStringIndex(config('web_api_dnsla'),0)}" datatype="s3-32" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="text" name="key[]" class="form-control" placeholder="DNS.LA的API密钥" value="{:getStringIndex(config('web_api_dnsla'),1)}" datatype="s3-32" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-block btn-primary">保存配置</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 </div>
 {/block}
