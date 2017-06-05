@@ -1,7 +1,8 @@
 {extend name="index/layout" /}
 {block name="app"}
+{:getHtmlCode(config('web_index_head'))}
 <div class="row">
-    <div class="col-xl-12 mt-2">
+    <div class="col-xl-12">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">首页</a></li>
             <li class="breadcrumb-item active">{{nav_title}}</li>
@@ -27,10 +28,12 @@
                 <div class="bg-faded p-3 border-top-0">
                     <form action="{:url('ajax/login')}" method="post" id="loginForm">
                         <div class="form-group">
-                            <input type="text" name="user" placeholder="输入用户名" class="form-control" datatype="s5-15" required>
+                            <input type="text" name="user" placeholder="输入用户名" class="form-control" datatype="s5-15"
+                                   required>
                         </div>
                         <div class="form-group">
-                            <input type="password" name="pwd" placeholder="输入密码" class="form-control" datatype="s5-15" required>
+                            <input type="password" name="pwd" placeholder="输入密码" class="form-control" datatype="s5-15"
+                                   required>
                         </div>
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary form-control">登录</button>
@@ -42,17 +45,21 @@
                 <div class="bg-faded p-3 border-top-0">
                     <form action="{:url('ajax/reg')}" method="post" class="ajaxForm">
                         <div class="form-group">
-                            <input type="text" name="user" placeholder="输入用户名" class="form-control" datatype="s5-15" required>
-                        </div>
-                        <div class="form-group">
-                            <input type="password" name="pwd" placeholder="设置密码" class="form-control" datatype="s5-15" id="reg_pwd"
+                            <input type="text" name="user" placeholder="输入用户名" class="form-control" datatype="s5-15"
                                    required>
                         </div>
                         <div class="form-group">
-                            <input type="password" name="repwd" recheck="pwd" placeholder="再输入一次密码" datatype="s5-15" class="form-control" required>
+                            <input type="password" name="pwd" placeholder="设置密码" class="form-control" datatype="s5-15"
+                                   id="reg_pwd"
+                                   required>
                         </div>
                         <div class="form-group">
-                            <input type="text" minlength="5" maxlength="5" name="code" placeholder="输入验证码" datatype="s5-5" class="form-control" required>
+                            <input type="password" name="repwd" recheck="pwd" placeholder="再输入一次密码" datatype="s5-15"
+                                   class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" minlength="5" maxlength="5" name="code" placeholder="输入验证码"
+                                   datatype="s5-5" class="form-control" required>
                         </div>
                         <div class="form-group text-center">
                             <img src="/other/code.php" onclick="this.src='/other/code.php?'+Math.random();"

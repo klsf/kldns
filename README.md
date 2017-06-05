@@ -20,7 +20,7 @@
 * 1、由于此程序是在ThinkPHP框架基础上完成开发，所以安装环境有以下要求
    * PHP+MYSQL
    * PHP版本》=5.4
-   * 支持PATH_INFO模式 （PS:如果今后台出现404错误，基本上就是不支PATH_INFO的原因）
+   * 支持PATH_INFO模式 （PS:如果金后台出现404错误，基本上就是不支PATH_INFO的原因）
 
 
 ## 有问题反馈
@@ -30,3 +30,4 @@
 * Github:https://github.com/klsf/kldns
 * 邮件(815856515#qq.com, 把#换成@)
 * QQ: 815856515
+* QQ交流群：[383286818](http://shang.qq.com/wpa/qunwpa?idkey=5c50f31eb84481f05bbbeca6a0759a2e9763118f04dce5c6ca2e23652cb2a58b")

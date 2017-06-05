@@ -23,9 +23,7 @@
 <body>
 <div class="container" id="app">
     {block name="app"}{/block}
-    <footer class="footer bg-faded mt-3 p-2">
-        {:getHtmlCode(config('web_foot'))}
-    </footer>
+    {:getHtmlCode(config('web_foot'))}
 </div>
 <script src="/assets/plugin/vue.js-2.3.3/vue.min.js"></script>
 <script src="/assets/plugin/vue-resource-1.3.3/vue-resource.min.js"></script>

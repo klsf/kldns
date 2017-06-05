@@ -16,7 +16,8 @@ INSERT INTO `pre_configs` VALUES ('password', '91d0ce90989fbfa1d92d1e37455f9873'
 INSERT INTO `pre_configs` VALUES ('name', '快乐二级域名分发', '网站名称');
 INSERT INTO `pre_configs` VALUES ('hold_rr', 'www,wap,3g,m,4g', '域名保留前缀');
 INSERT INTO `pre_configs` VALUES ('version', '2.0', '版本号');
-INSERT INTO `pre_configs` VALUES ('foot', '<p class=\"text-center\">Powered by <a href=\"https://github.com/klsf\" target=\"_blank\">klsf</a> v2.0</p>', '前台底部代码');
+INSERT INTO `pre_configs` VALUES ('foot', '<footer class=\"footer bg-faded mt-3 p-2\"><p class=\"text-center\">Powered by <a href=\"https://github.com/klsf\" target=\"_blank\">klsf</a> v2.0</p></footer>', '前台底部代码');
+INSERT INTO `pre_configs` VALUES ('index_head', '<div class=\"row\"><div class=\"col-xl-12\"><div class=\"breadcrumb mt-2\"><h1 class=\"display-5\">快乐二级域名分发系统</h1><p class=\"lead\">好用、简单、免费的二级域名分发系统</p></div></div></div>', '首页顶部代码');
 DROP TABLE IF EXISTS `pre_domains`;
 CREATE TABLE `pre_domains` (
   `domain_id` varchar(50) NOT NULL,
