@@ -151,10 +151,13 @@ if (pathName.indexOf('control') > 0) {
             },
             delRecord: function (id) {
                 if (!confirm("确认删除这条解析？")) return false;
+                var load = layer.load(3);
                 this.$http.post($.klsf.ajaxUrl + "record/action/del.html", {record_id: id}, {emulateJSON: true}).then(function (response) {
+                    layer.close(load);
                     this.getRecordList();
                     $.klsf.layerAlert("提示", response.body.message);
                 }, function () {
+                    layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
             },
@@ -207,10 +210,13 @@ if (pathName.indexOf('control') > 0) {
             },
             delDomain: function (id) {
                 if (!confirm("删除域名并不会删除解析记录，确认删除此域名？")) return false;
+                var load = layer.load(3);
                 this.$http.post($.klsf.adminAjaxUrl + "domain/action/del.html", {domain_id: id}, {emulateJSON: true}).then(function (response) {
+                    layer.close(load);
                     this.getDomainList();
                     $.klsf.layerAlert("提示", response.body.message);
                 }, function () {
+                    layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
             },
@@ -300,10 +306,13 @@ if (pathName.indexOf('control') > 0) {
             },
             delRecord: function (id) {
                 if (!confirm("确认删除这条解析？")) return false;
+                var load = layer.load(3);
                 this.$http.post($.klsf.adminAjaxUrl + "record/action/del.html", {record_id: id}, {emulateJSON: true}).then(function (response) {
+                    layer.close(load);
                     this.getRecordList();
                     $.klsf.layerAlert("提示", response.body.message);
                 }, function () {
+                    layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
             },
@@ -356,10 +365,13 @@ if (pathName.indexOf('control') > 0) {
             },
             delUser: function (id) {
                 if (!confirm("删除用户不会删除其解析记录，确认删除用户？")) return false;
+                var load = layer.load(3);
                 this.$http.post($.klsf.adminAjaxUrl + "user/action/del.html", {uid: id}, {emulateJSON: true}).then(function (response) {
+                    layer.close(load);
                     this.getUserList();
                     $.klsf.layerAlert("提示", response.body.message);
                 }, function () {
+                    layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
             },
