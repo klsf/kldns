@@ -1,1 +1,0 @@
-Def:默认,TelDef:电信,UniDef:联通,EduDef:教育网,MobDef:移动,CTTDef:铁通,ForDef:国外,Spi:搜索引擎,BaiSpi:百度蜘蛛,GooSpi:谷歌蜘蛛,haospi:好搜蜘蛛,SosSpi:搜搜蜘蛛,SogSpi:搜狗蜘蛛,YahSpi:雅虎蜘蛛
