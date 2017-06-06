@@ -38,7 +38,7 @@ class DnsPod implements Dns
         return self::$_instance;
     }
 
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $_domainId && $parameter['domain_id'] = $_domainId;
         $_domain && $parameter['domain'] = $_domain;
@@ -46,7 +46,7 @@ class DnsPod implements Dns
         $parameter['record_type'] = $_type;
         $parameter['value'] = $_value;
         $parameter['mx'] = 20;
-        $parameter['record_line'] = "默认";
+        $parameter['record_line_id'] = $_line;
         if ($arr = $this->getResult("Record.Create", $parameter)) {
             return array(
                 'RecordId' => $arr['record']['id'],
@@ -68,7 +68,7 @@ class DnsPod implements Dns
         return false;
     }
 
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $_domainId && $parameter['domain_id'] = $_domainId;
         $_domain && $parameter['domain'] = $_domain;
@@ -77,7 +77,7 @@ class DnsPod implements Dns
         $parameter['record_type'] = $_type;
         $parameter['value'] = $_value;
         $parameter['mx'] = 20;
-        $parameter['record_line'] = "默认";
+        $parameter['record_line_id'] = $_line;
         if ($this->getResult("Record.Modify", $parameter)) {
             return true;
         }
@@ -139,6 +139,45 @@ class DnsPod implements Dns
             }
         }
         return false;
+    }
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null)
+    {
+        /*
+        $_domainId && $parameter['domain_id'] = $_domainId;
+        $_domain && $parameter['domain'] = $_domain;
+        if ($arr = $this->getResult("Record.Line", $parameter)) {
+            if (isset($arr['line_ids'])) {
+                $list = array();
+                foreach ($arr['line_ids'] as $line => $id) {
+                    $list[] = array(
+                        'Name' => $line,
+                        'Id' => $id,
+                    );
+                }
+                return $list;
+            }
+        }
+        return false;
+        */
+        //由于大部分域名套餐都是免费版，就不用动态获取，都是固定值
+        $str = '默认:0,国内:7=0,国外:3=0,电信:10=0,联通:10=1,教育网:10=2,移动:10=3,百度:90=0,谷歌:90=1,搜搜:90=4,有道:90=2,必应:90=3,搜狗:90=5,奇虎:90=6,搜索引擎:80=0';
+        $l1 = explode(',', $str);
+        $list = array();
+        foreach ($l1 as $str) {
+            $l2 = explode(':', $str);
+            $list[] = array(
+                'Name' => $l2[0],
+                'Id' => $l2[1],
+            );
+        }
+        return $list;
     }
 
     public function checkToken()
@@ -213,4 +252,5 @@ class DnsPod implements Dns
         curl_close($ch);
         return $result;
     }
+
 }

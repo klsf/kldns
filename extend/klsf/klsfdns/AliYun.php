@@ -54,12 +54,13 @@ class AliYun implements Dns
         $this->commonParams["SignatureVersion"] = '1.0';
     }
 
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['DomainName'] = $_domain;
         $parameter['RR'] = $_rr;
         $parameter['Type'] = $_type;
         $parameter['Value'] = $_value;
+        $parameter['Line'] = $_line;
         if ($arr = $this->getResult("AddDomainRecord", $parameter)) {
             return array(
                 'RecordId' => $arr['RecordId'],
@@ -79,12 +80,13 @@ class AliYun implements Dns
         return false;
     }
 
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['RecordId'] = $_recordId;
         $parameter['RR'] = $_rr;
         $parameter['Type'] = $_type;
         $parameter['Value'] = $_value;
+        $parameter['Line'] = $_line;
         if ($this->getResult("UpdateDomainRecord", $parameter)) {
             return true;
         }
@@ -142,6 +144,27 @@ class AliYun implements Dns
             }
         }
         return false;
+    }
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null)
+    {
+        $str = 'default:默认,telecom:电信,unicom:联通,mobile:移动,oversea:海外,edu:教育网,线路值:线路中文说明,search:搜索引擎,google:谷歌,baidu:百度,biying:必应,youdao:有道，yahoo:雅虎';
+        $l1 = explode(',', $str);
+        $list = array();
+        foreach ($l1 as $str) {
+            $l2 = explode(':', $str);
+            $list[] = array(
+                'Name' => $l2[1],
+                'Id' => $l2[0],
+            );
+        }
+        return $list;
     }
 
     public function checkToken()
@@ -288,4 +311,5 @@ class AliYun implements Dns
         curl_close($ch);
         return $result;
     }
+
 }

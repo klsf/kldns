@@ -24,10 +24,9 @@
                     <form id="searchForm" class="form-inline">
                         <select class="form-control mr-1" v-on:change="getDomainList" :value="s_dns" v-model="s_dns">
                             <option value="0">所有</option>
-                            <option value="dnspod">dnspod</option>
-                            <option value="aliyun">aliyun</option>
-                            <option value="cloudxns">cloudxns</option>
-                            <option value="dnscom">dnscom</option>
+                            {volist name="dnsList" id="dns"}
+                            <option value="{$dns.dns}">{$dns.dns}</option>
+                            {/volist}
                         </select>
                         <div class="form-group mr-1">
                             <input type="text" class="form-control" placeholder="输入域名" v-on:change="getDomainList"
@@ -87,21 +86,9 @@
                         <div class="input-group">
                             <span class="input-group-addon">平台</span>
                             <select name="dns" class="form-control">
-                                {if condition="config('web_api_dnspod')"}
-                                <option value="dnspod">dnspod</option>
-                                {/if}
-                                {if condition="config('web_api_aliyun')"}
-                                <option value="aliyun">aliyun</option>
-                                {/if}
-                                {if condition="config('web_api_cloudxns')"}
-                                <option value="cloudxns">cloudxns</option>
-                                {/if}
-                                {if condition="config('web_api_dnscom')"}
-                                <option value="dnscom">dnscom</option>
-                                {/if}
-                                {if condition="config('web_api_dnsla')"}
-                                <option value="dnsla">dnsla</option>
-                                {/if}
+                                {volist name="dnsList" id="dns"}
+                                <option value="{$dns.dns}">{$dns.dns}</option>
+                                {/volist}
                             </select>
                             <a href="#" class="input-group-addon" @click="getApiDomainList">获取</a>
                         </div>

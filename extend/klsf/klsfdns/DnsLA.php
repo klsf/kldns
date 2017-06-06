@@ -51,17 +51,18 @@ class DnsLA implements Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId, $_domain = null)
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId, $_domain = null)
     {
         $parameter['cmd'] = 'create';
         $parameter['domainid'] = $_domainId;
         $parameter['host'] = $_rr;
         $parameter['recordtype'] = $_type;
-        $parameter['recordline'] = 'Def';
+        $parameter['recordline'] = $_line;
         $parameter['recorddata'] = $_value;
         if ($arr = $this->getResult(self::RECORD_API_URL, $parameter)) {
             return array(
@@ -74,7 +75,7 @@ class DnsLA implements Dns
     }
 
     /**
-    /**
+     * /**
      * 删除解析记录
      * @param $_recordId
      * @param null $_domainId
@@ -98,18 +99,19 @@ class DnsLA implements Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param null $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['cmd'] = 'edit';
         $parameter['domainid'] = $_domainId;
         $parameter['recordid'] = $_recordId;
         $parameter['host'] = $_rr;
         $parameter['recordtype'] = $_type;
-        $parameter['recordline'] = 'Def';
+        $parameter['recordline'] = $_line;
         $parameter['recorddata'] = $_value;
         if ($this->getResult(self::RECORD_API_URL, $parameter)) {
             return true;
@@ -192,6 +194,28 @@ class DnsLA implements Dns
         }
         return false;
     }
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null)
+    {
+        $str = 'Def:默认,TelDef:电信,UniDef:联通,EduDef:教育网,MobDef:移动,CTTDef:铁通,ForDef:国外,Spi:搜索引擎,BaiSpi:百度蜘蛛,GooSpi:谷歌蜘蛛,haospi:好搜蜘蛛,SosSpi:搜搜蜘蛛,SogSpi:搜狗蜘蛛,YahSpi:雅虎蜘蛛';
+        $l1 = explode(',', $str);
+        $list = array();
+        foreach ($l1 as $str) {
+            $l2 = explode(':', $str);
+            $list[] = array(
+                'Name' => $l2[1],
+                'Id' => $l2[0],
+            );
+        }
+        return $list;
+    }
+
 
     /**
      * 验证配置是否正确

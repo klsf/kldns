@@ -16,11 +16,12 @@ interface Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId, $_domain = null);
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId, $_domain = null);
 
     /**
      * 删除解析记录
@@ -37,11 +38,12 @@ interface Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param null $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null);
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null);
 
     /**
      * 获取解析记录信息
@@ -65,6 +67,14 @@ interface Dns
      * @return mixed
      */
     public function getDomainList();
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null);
 
     /**
      * 验证配置是否正确

@@ -94,3 +94,12 @@ function getHtmlCode($value, $html = false)
     }
     return $value;
 }
+
+function getLineInfo($lines, $index = 0)
+{
+    $lines = json_decode($lines, true);
+    if (isset($lines[$index])) {
+        return $lines[$index];
+    }
+    return $lines[0];
+}

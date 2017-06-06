@@ -5,7 +5,7 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/">首页</a></li>
             <li class="breadcrumb-item active">控制中心</li>
-                <span class="pull-right">
+            <span class="pull-right">
                     <a class="btn-sm btn-info" data-toggle="modal"
                        href="#modal-profile" data-backdrop="false"><i class="fa fa-user"></i></a>
                 </span>
@@ -17,7 +17,7 @@
         <div class="card bg-faded">
             <div class="card-header">
                 <i class="fa fa-list"></i> 我的解析记录
-                    <span class="pull-right">
+                <span class="pull-right">
                         <a class="btn-sm btn-success" data-toggle="modal" href="#modal-addRecord" data-backdrop="false"><i
                                 class="fa fa-plus"></i> 添加</a>
                     </span>
@@ -54,6 +54,7 @@
                         <th>二级域名</th>
                         <td>方式</td>
                         <td>记录值</td>
+                        <td>线路</td>
                         <td>操作</td>
                     </tr>
                     </thead>
@@ -62,6 +63,7 @@
                         <th scope="row">{{record.rr}}.{{record.domain}}</th>
                         <td>{{record.type}}</td>
                         <td>{{record.value}}</td>
+                        <td>{{record.line_name}}</td>
                         <td>
                             <div style="width: 180px;margin: 0 auto;">
                                 <a class="btn-sm btn-info" :href="'http://'+record.rr+'.'+record.domain"
@@ -97,7 +99,7 @@
                         <div class="input-group">
                             <input type="text" class="form-control" placeholder="主机记录" name="rr" datatype="s2-15"
                                    required>
-                            <select name="domain_id" class="form-control" required>
+                            <select name="domain_id" class="form-control" v-model="selectDomainId" v-on:change="selectDomain()" required>
                                 <option v-for="domain in domainList" :value="domain.domain_id">{{domain.domain}}
                                 </option>
                             </select>
@@ -112,6 +114,15 @@
                             </select>
                             <input type="text" class="form-control" placeholder="记录值" name="value" datatype="s2-15"
                                    errormsg="输入正确的记录值" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">线路</span>
+                            <select name="line" class="form-control" required>
+                                <option v-for="(line,index) in lineList" :value="index">{{line.Name}}
+                                </option>
+                            </select>
                         </div>
                     </div>
                     <div class="form-group">
@@ -170,6 +181,15 @@
                             </select>
                             <input type="text" class="form-control" placeholder="记录值" :value="recordInfo.value"
                                    name="value" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <div class="input-group">
+                            <span class="input-group-addon">线路</span>
+                            <select name="line" class="form-control" v-modal="recordInfo.line" v-model="recordInfo.line" required>
+                                <option v-for="(line,index) in recordInfo.lineList" :value="index">{{line.Name}}
+                                </option>
+                            </select>
                         </div>
                     </div>
                 </div>

@@ -46,17 +46,18 @@ class AdminAjax extends Common
         $dnsApi = KlsfDns::getClass($dns, $key);
         if (!$dnsApi->checkToken()) {
             $this->result['message'] = '验证接口密匙失败，请重新确认！';
+        } elseif (!$lines = $dnsApi->getRecordLine()) {
+            $this->result['message'] = '获取解析平台线路失败！';
         } else {
-            $vkey = 'api_' . $dns;
             $data = [
-                'vkey' => $vkey,
-                'value' => $key
+                'dns' => $dns,
+                'api_key' => $key,
+                'lines' => json_encode($lines),
             ];
-            if (db('configs')->where('vkey', $vkey)->find()) {
-                db('configs')->where('vkey', $vkey)->limit(1)->update($data);
+            if (db('dns_apis')->where('dns', $dns)->find()) {
+                db('dns_apis')->where('dns', $dns)->limit(1)->update($data);
             } else {
-                $data['remark'] = $dns . " API信息";
-                db('configs')->insert($data);
+                db('dns_apis')->insert($data);
             }
             $this->result['code'] = 0;
             $this->result['message'] = '保存配置成功';
@@ -112,10 +113,10 @@ class AdminAjax extends Common
             $this->result['list'] = $query2->field('a.*,count(b.record_id) as total')->join('records b', 'b.domain_id = a.domain_id', 'left')->group('a.domain_id')->order('add_time desc')->page($page, $pageSize)->select();
         } elseif ($action == 'apiList') {
             $dns = input("post.dns");
-            if (!$key = db('configs')->where('vkey', 'api_' . $dns)->find()) {
+            if (!$key = db('dns_apis')->where('dns', $dns)->find()) {
                 $this->result['message'] = '此平台接口信息未配置';
             } else {
-                $dnsApi = KlsfDns::getClass($dns, $key['value']);
+                $dnsApi = KlsfDns::getClass($dns, $key['api_key']);
                 if ($list = $dnsApi->getDomainList()) {
                     $this->result['code'] = 0;
                     $this->result['message'] = '获取成功';
@@ -138,6 +139,7 @@ class AdminAjax extends Common
                 'domain_id' => $domain_id,
                 'dns' => $dns,
                 'power' => $power,
+                'add_time' => date("Y-m-d H:i:s")
             ];
             if (db('domains')->where('domain_id', $domain_id)->find()) {
                 $this->result['message'] = '此域名已经添加过';
@@ -193,10 +195,10 @@ class AdminAjax extends Common
                 $this->result['message'] = '记录不存在';
             } elseif (!$domain['dns']) {
                 $this->result['message'] = '域名不存在';
-            } elseif (!$key = db('configs')->where('vkey', 'api_' . $domain['dns'])->find()) {
+            } elseif (!$key = db('dns_apis')->where('dns', $domain['dns'])->find()) {
                 $this->result['message'] = '此平台接口信息未配置';
             } else {
-                $dns = KlsfDns::getClass($domain['dns'], $key['value']);
+                $dns = KlsfDns::getClass($domain['dns'], $key['api_key']);
                 if ($ret = $dns->updateDomainRecord($record_id, $rr, $type, $value, $domain['domain_id'], $domain['domain'])) {
                     $data = [
                         'rr' => $rr,
@@ -218,8 +220,8 @@ class AdminAjax extends Common
             if (!$domain = db("records")->alias('a')->field('b.*')->join('domains b', 'b.domain_id = a.domain_id ')->where('a.record_id', $record_id)->find()) {
                 $this->result['message'] = '记录不存在';
             } elseif (db('records')->where('record_id', $record_id)->delete()) {
-                if ($domain['dns'] && $key = db('configs')->where('vkey', 'api_' . $domain['dns'])->find()) {
-                    $dns = KlsfDns::getClass($domain['dns'], $key['value']);
+                if ($domain['dns'] && $key = db('dns_apis')->where('dns', $domain['dns'])->find()) {
+                    $dns = KlsfDns::getClass($domain['dns'], $key['api_key']);
                     $dns->deleteDomainRecord($record_id, $domain['domain_id'], $domain['domain']);
                 }
                 $this->result['code'] = 0;

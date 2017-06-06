@@ -39,16 +39,18 @@ class DnsCom implements Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId, $_domain = null)
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId, $_domain = null)
     {
         $parameter['domainID'] = $_domainId;
         $parameter['host'] = $_rr;
         $parameter['type'] = $_type;
         $parameter['value'] = $_value;
+        $parameter['viewID'] = $_line;
         if ($arr = $this->getResult("record/create", $parameter)) {
             return array(
                 'RecordId' => $arr['data']['recordID'],
@@ -82,17 +84,19 @@ class DnsCom implements Dns
      * @param $_rr
      * @param $_type
      * @param $_value
+     * @param $_line
      * @param null $_domainId
      * @param null $_domain
      * @return mixed
      */
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['domainID'] = $_domainId;
         $parameter['recordID'] = $_recordId;
         $parameter['newhost'] = $_rr;
         $parameter['newtype'] = $_type;
         $parameter['newvalue'] = $_value;
+        $parameter['viewID'] = $_line;
         if ($this->getResult("record/modify", $parameter)) {
             return true;
         }
@@ -174,6 +178,28 @@ class DnsCom implements Dns
         }
         return false;
     }
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null)
+    {
+        $str = '默认:0,电信:285344768,联通:285345792,移动:285346816';
+        $l1 = explode(',', $str);
+        $list = array();
+        foreach ($l1 as $str) {
+            $l2 = explode(':', $str);
+            $list[] = array(
+                'Name' => $l2[0],
+                'Id' => $l2[1],
+            );
+        }
+        return $list;
+    }
+
 
     /**
      * 验证配置是否正确
@@ -264,4 +290,5 @@ class DnsCom implements Dns
         curl_close($ch);
         return $result;
     }
+
 }

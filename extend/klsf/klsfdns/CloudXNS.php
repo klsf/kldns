@@ -36,13 +36,13 @@ class CloudXNS implements Dns
     }
 
 
-    public function addDomainRecord($_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function addDomainRecord($_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['domain_id'] = $_domainId;
         $parameter['host'] = $_rr;
         $parameter['type'] = $_type;
         $parameter['value'] = $_value;
-        $parameter['line_id'] = 1;
+        $parameter['line_id'] = $_line;
         if ($arr = $this->getResult("record", json_encode($parameter))) {
             return array(
                 'RecordId' => $arr['record_id'][0],
@@ -62,12 +62,13 @@ class CloudXNS implements Dns
         return false;
     }
 
-    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_domainId = null, $_domain = null)
+    public function updateDomainRecord($_recordId, $_rr, $_type, $_value, $_line, $_domainId = null, $_domain = null)
     {
         $parameter['domain_id'] = $_domainId;
         $parameter['host'] = $_rr;
         $parameter['type'] = $_type;
         $parameter['value'] = $_value;
+        $parameter['line_id'] = $_line;
         if ($this->getResult("record/" . $_recordId, json_encode($parameter), 'PUT')) {
             return true;
         }
@@ -118,6 +119,27 @@ class CloudXNS implements Dns
             }
         }
         return false;
+    }
+
+    /**
+     * 获取域名线路列表
+     * @param null $_domainId
+     * @param null $_domain
+     * @return mixed
+     */
+    public function getRecordLine($_domainId = null, $_domain = null)
+    {
+        $str = '默认:1,电信:2,联通:3,移动:144,铁通:5,教育网:6,国内其他:8,海外:9,搜索引擎:133,百度搜索:136,谷歌搜索:135,好搜搜索:137,雅虎搜索:138,搜搜搜索:139,必应搜索:142';
+        $l1 = explode(',', $str);
+        $list = array();
+        foreach ($l1 as $str) {
+            $l2 = explode(':', $str);
+            $list[] = array(
+                'Name' => $l2[0],
+                'Id' => $l2[1],
+            );
+        }
+        return $list;
     }
 
     public function checkToken()
@@ -220,4 +242,5 @@ class CloudXNS implements Dns
         curl_close($ch);
         return $result;
     }
+
 }

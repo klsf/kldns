@@ -26,6 +26,12 @@ CREATE TABLE `pre_domains` (
   `power` int(11) NOT NULL DEFAULT '0',
   `add_time` datetime DEFAULT NULL
 ) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+DROP TABLE IF EXISTS `pre_dns_apis`;
+CREATE TABLE `pre_dns_apis` (
+  `dns` varchar(30) NOT NULL,
+  `api_key` varchar(255) NOT NULL,
+  `lines` varchar(2000) DEFAULT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 DROP TABLE IF EXISTS `pre_records`;
 CREATE TABLE `pre_records` (
   `uid` int(11) NOT NULL,
@@ -34,6 +40,8 @@ CREATE TABLE `pre_records` (
   `rr` varchar(15) NOT NULL,
   `type` varchar(10) NOT NULL,
   `value` varchar(50) NOT NULL,
+  `line` tinyint(5) DEFAULT '0',
+  `line_name` varchar(50) NOT NULL,
   `add_time` datetime DEFAULT NULL,
   PRIMARY KEY (`record_id`),
   UNIQUE KEY `record_info` (`record_id`,`domain_id`),

@@ -41,6 +41,7 @@ class Ajax extends Common
         $type = input('post.type');
         $value = strtolower(input('post.value'));
         if ($action == 'add') {
+            $lineIndex = input('post.line/d');
             $domain_id = input('post.domain_id');
             if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
                 $this->result['message'] = '主机记录格式不正确';
@@ -50,13 +51,18 @@ class Ajax extends Common
                 $this->result['message'] = '解析类型不存在';
             } elseif ($this->userInfo['coin'] < config('web_record_coin')) {
                 $this->result['message'] = '账户金币不足';
-            } elseif (db('records')->where('rr', $rr)->where('domain_id', $domain_id)->find()) {
-                $this->result['message'] = '此记录已存在，或被其他用户解析';
+            } elseif (db('records')->where('rr', $rr)->where('uid', 'neq', $this->uid)->where('domain_id', $domain_id)->find()) {
+                $this->result['message'] = '此记录已被其他用户解析';
+            } elseif ($lineIndex && !db('records')->where('rr', $rr)->where('uid', $this->uid)->where('domain_id', $domain_id)->where('line', 0)->find()) {
+                $this->result['message'] = '请先添加一条默认线路';
             } elseif (!$domain = db('domains')->where('domain_id', $domain_id)->where('power & ' . $this->userInfo['group'])->find()) {
                 $this->result['message'] = '域名不存在';
+            } elseif (!$key = db('dns_apis')->where('dns', $domain['dns'])->find()) {
+                $this->result['message'] = '此平台接口信息未配置';
             } else {
-                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
-                if ($ret = $dns->addDomainRecord($rr, $type, $value, $domain['domain_id'], $domain['domain'])) {
+                $line = getLineInfo($key['lines'], $lineIndex);
+                $dns = KlsfDns::getClass($domain['dns'], $key['api_key']);
+                if ($ret = $dns->addDomainRecord($rr, $type, $value, $line['Id'], $domain['domain_id'], $domain['domain'])) {
                     if (updateCoin($this->uid, 0 - config('web_record_coin'), "添加记录[{$rr}.{$domain['domain']}]")) {
                         $data = [
                             'uid' => $this->uid,
@@ -65,6 +71,8 @@ class Ajax extends Common
                             'rr' => $rr,
                             'type' => $type,
                             'value' => $value,
+                            'line_name' => $line['Name'],
+                            'line' => $lineIndex,
                             'add_time' => date("Y-m-d H:i:s")
                         ];
                         if (db('records')->insert($data)) {
@@ -81,6 +89,7 @@ class Ajax extends Common
                 }
             }
         } elseif ($action == 'update') {
+            $lineIndex = input('post.line/d');
             $record_id = input('post.record_id');
             if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
                 $this->result['message'] = '主机记录格式不正确';
@@ -90,15 +99,24 @@ class Ajax extends Common
                 $this->result['message'] = '解析类型不存在';
             } elseif (!$domain = db("records")->alias('a')->field('b.*')->join('domains b', 'b.domain_id = a.domain_id and b.power&' . $this->userInfo['group'])->where('a.uid', $this->uid)->where('a.record_id', $record_id)->find()) {
                 $this->result['message'] = '记录不存在';
-            } elseif (!$domain['dns']) {
+            } elseif (db('records')->where('rr', $rr)->where('uid', 'neq', $this->uid)->where('domain_id', $domain['domain_id'])->find()) {
+                $this->result['message'] = '此记录已被其他用户解析';
+            } elseif ($lineIndex && !db('records')->where('rr', $rr)->where('uid', $this->uid)->where('domain_id', $domain['domain_id'])->where('line', 0)->find()) {
+                $this->result['message'] = '请先添加一条默认线路';
+            } elseif (!$domain = db('domains')->where('domain_id', $domain['domain_id'])->where('power & ' . $this->userInfo['group'])->find()) {
                 $this->result['message'] = '域名不存在';
+            } elseif (!$key = db('dns_apis')->where('dns', $domain['dns'])->find()) {
+                $this->result['message'] = '此平台接口信息未配置';
             } else {
-                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
-                if ($ret = $dns->updateDomainRecord($record_id, $rr, $type, $value, $domain['domain_id'], $domain['domain'])) {
+                $line = getLineInfo($key['lines'], $lineIndex);
+                $dns = KlsfDns::getClass($domain['dns'], $key['api_key']);
+                if ($ret = $dns->updateDomainRecord($record_id, $rr, $type, $value, $line['Id'], $domain['domain_id'], $domain['domain'])) {
                     $data = [
                         'rr' => $rr,
                         'type' => $type,
-                        'value' => $value
+                        'value' => $value,
+                        'line_name' => $line['Name'],
+                        'line' => $lineIndex,
                     ];
                     if (db('records')->where('record_id', $record_id)->update($data)) {
                         $this->result['code'] = 0;
@@ -115,8 +133,10 @@ class Ajax extends Common
             if (!$domain = db("records")->alias('a')->field('b.*')->join('domains b', 'b.domain_id = a.domain_id ')->where('a.uid', $this->uid)->where('a.record_id', $record_id)->find()) {
                 $this->result['message'] = '记录不存在';
             } elseif (db('records')->where('record_id', $record_id)->delete()) {
-                $dns = KlsfDns::getClass($domain['dns'], config('web_api_' . $domain['dns']));
-                $dns->deleteDomainRecord($record_id, $domain['domain_id'], $domain['domain']);
+                if ($key = db('dns_apis')->where('dns', $domain['dns'])->find()) {
+                    $dns = KlsfDns::getClass($domain['dns'], $key['api_key']);
+                    $dns->deleteDomainRecord($record_id, $domain['domain_id'], $domain['domain']);
+                }
                 $this->result['code'] = 0;
                 $this->result['message'] = '删除成功';
             } else {
@@ -150,6 +170,8 @@ class Ajax extends Common
             $this->result['page'] = $page;
             $this->result['totalPage'] = ceil(($total + 0.1) / 10);
             $this->result['list'] = $query2->field('a.*,b.domain')->join('domains b', 'b.domain_id = a.domain_id')->order('add_time desc')->page($page, 10)->select();
+
+            $this->result['coin'] = $this->userInfo['coin'];
         } else {
             $this->result['message'] = '操作不存在';
         }
@@ -161,7 +183,14 @@ class Ajax extends Common
     public function domainList()
     {
         $this->checkLogin();
-        return db("domains")->field('domain_id,domain')->where('power & ' . $this->userInfo['group'])->order('add_time desc')->limit(0, 5)->select();
+        $list = db("domains")->alias('a')->field('a.domain_id,a.domain,b.lines')->join('dns_apis b ', 'b.dns=a.dns')->where('a.power & ' . $this->userInfo['group'])->order('a.add_time desc')->select();
+        if ($list) {
+            foreach ($list as $k => $v) {
+                $v['lines'] = json_decode($v['lines'], true);
+                $list[$k] = $v;
+            }
+        }
+        return $list;
     }
 
     public function adminLogin()

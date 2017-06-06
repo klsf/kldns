@@ -72,6 +72,14 @@ $.klsf = {
 
         }
     },
+    findObjIndex: function (obj, key, value) {
+        for (var i = 0; i < obj.length; i++) {
+            if (obj[i][key] === value) {
+                return i;
+            }
+        }
+        return -1;
+    },
 }
 var $_GET = (function () {
     var url = window.document.location.href.toString();
@@ -104,6 +112,9 @@ if (pathName.indexOf('control') > 0) {
             s_rr: null,
             s_type: 0,
             s_value: null,
+            lineList: {},
+            lineName: null,
+            selectDomainId: null,
             page: 1,
         },
         created: function () {
@@ -115,6 +126,10 @@ if (pathName.indexOf('control') > 0) {
             getDomainList: function () {
                 this.$http.get($.klsf.ajaxUrl + "domainList.html").then(function (response) {
                     this.domainList = response.body;
+                    if (this.domainList.length > 0) {
+                        this.lineList = this.domainList[0].lines;
+                        this.selectDomainId = this.domainList[0].domain_id;
+                    }
                 }, function () {
                     $.klsf.layerAlert("错误提醒", "加载域名列表失败");
                 });
@@ -131,6 +146,7 @@ if (pathName.indexOf('control') > 0) {
                 this.$http.post($.klsf.ajaxUrl + "record/action/list.html", data).then(function (response) {
                     layer.close(load);
                     this.recordList = response.body.list;
+                    this.coin = response.body.coin;
 
                     $('#pagination').twbsPagination({
                         startPage: response.body.page,
@@ -147,7 +163,12 @@ if (pathName.indexOf('control') > 0) {
                 });
             },
             updateRecord: function (index) {
-                this.recordInfo = this.recordList[index];
+                var info = this.recordList[index];
+                var i = $.klsf.findObjIndex(this.domainList, 'domain_id', info.domain_id);
+                if (i >= 0) {
+                    info.lineList = this.domainList[i].lines;
+                }
+                this.recordInfo = info;
             },
             delRecord: function (id) {
                 if (!confirm("确认删除这条解析？")) return false;
@@ -160,6 +181,12 @@ if (pathName.indexOf('control') > 0) {
                     layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
+            },
+            selectDomain: function () {
+                var i = $.klsf.findObjIndex(this.domainList, 'domain_id', this.selectDomainId);
+                if (i >= 0) {
+                    this.lineList = this.domainList[i].lines;
+                }
             },
         }
     }
@@ -241,6 +268,7 @@ if (pathName.indexOf('control') > 0) {
                         $.klsf.layerAlert("错误提醒", response.body.message);
                     }
                 }, function () {
+                    layer.close(load);
                     $.klsf.layerAlert("错误提醒", "请稍后再试！");
                 });
             },
