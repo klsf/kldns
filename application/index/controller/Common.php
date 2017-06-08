@@ -11,12 +11,14 @@ namespace app\index\controller;
 
 use think\Controller;
 use think\Cookie;
+use think\Url;
 
 class Common extends Controller
 {
     function _initialize()
     {
         parent::_initialize();
+        Url::root('/index.php');
         define('DB_PREFIX', config('database')['prefix']);//数据表前缀，后面使用原生SQL可能会用到
         Cookie::init(['prefix' => 'kldns_', 'expire' => 3600 * 24 * 7, 'path' => '/']);
         $this->loadConfig();
