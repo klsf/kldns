@@ -152,9 +152,9 @@ class Ajax extends Common
             $rr = input('post.rr');
             $type = input('post.type');
             $value = input('post.value');
-            $query = db("records")->alias('a');
+            $query = db("records")->alias('a')->where('a.uid', $this->uid);
             if ($domain_id) {
-                $query->where('a.domain_id', $domain_id)->where('a.uid', $this->uid);
+                $query->where('a.domain_id', $domain_id);
             }
             if ($rr) {
                 $query->where('a.rr', $rr);
