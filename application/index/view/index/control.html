@@ -6,9 +6,10 @@
             <li class="breadcrumb-item"><a href="/">首页</a></li>
             <li class="breadcrumb-item active">控制中心</li>
             <span class="pull-right">
-                    <a class="btn-sm btn-info" data-toggle="modal"
-                       href="#modal-profile" data-backdrop="false"><i class="fa fa-user"></i></a>
-                </span>
+                <a class="btn-sm btn-warning" @click="signOut" title="退出登录"><i class="fa fa-sign-out"></i></a>
+                <a class="btn-sm btn-info" data-toggle="modal" title="修改密码"
+                   href="#modal-profile" data-backdrop="false"><i class="fa fa-user"></i></a>
+            </span>
         </ol>
     </div>
 </div>

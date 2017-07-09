@@ -33,6 +33,16 @@ class Ajax extends Common
         return $this->result;
     }
 
+    public function signOut()
+    {
+        if ($this->uid) {
+            db('users')->where('uid', $this->uid)->update(['sid' => createSid()]);
+        }
+        $this->result['code'] = 0;
+        $this->result['message'] = '退出登录成功';
+        return $this->result;
+    }
+
     public function record()
     {
         $this->checkLogin();
@@ -45,7 +55,7 @@ class Ajax extends Common
             $domain_id = input('post.domain_id');
             if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
                 $this->result['message'] = '主机记录格式不正确';
-            }elseif(in_array($rr,explode(',',config('web_hold_rr')))){
+            } elseif (in_array($rr, explode(',', config('web_hold_rr')))) {
                 $this->result['message'] = '此主机记录已被禁用';
             } elseif (strlen($value) < 5) {
                 $this->result['message'] = '记录值不正确';
@@ -95,7 +105,7 @@ class Ajax extends Common
             $record_id = input('post.record_id');
             if (!preg_match('/^[a-z0-9\-\_]{2,15}$/', $rr)) {
                 $this->result['message'] = '主机记录格式不正确';
-            }elseif(in_array($rr,explode(',',config('web_hold_rr')))){
+            } elseif (in_array($rr, explode(',', config('web_hold_rr')))) {
                 $this->result['message'] = '此主机记录已被禁用';
             } elseif (strlen($value) < 5) {
                 $this->result['message'] = '记录值不正确';

@@ -188,6 +188,19 @@ if (pathName.indexOf('control') > 0) {
                     this.lineList = this.domainList[i].lines;
                 }
             },
+            signOut: function () {
+                if (!confirm("确定要退出登录？")) return false;
+                var load = layer.load(3);
+                this.$http.post($.klsf.ajaxUrl + "signOut.html", null, {emulateJSON: true}).then(function (response) {
+                    layer.close(load);
+                    $.klsf.layerAlert("退出成功", response.body.message, function () {
+                        window.location.href = "/";
+                    });
+                }, function () {
+                    layer.close(load);
+                    $.klsf.layerAlert("错误提醒", "请稍后再试！");
+                });
+            },
         }
     }
 } else if (pathName.indexOf('domain_list') > 0) {
