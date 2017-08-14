@@ -67,6 +67,30 @@ class AdminAjax extends Common
 
     public function config()
     {
+        if (input('post.act') == 'email') {
+            //邮箱配置
+            unset($_POST['act']);
+            $host = input('post.email_host');
+            $port = input('post.email_port');
+            $username = input('post.email_username');
+            $password = input('post.email_password');
+            if (!$host || !$port || !$username || !$password) {
+                $this->result['message'] = '各项均不能为空';
+                return $this->result;
+            } else {
+                $config = [
+                    'host' => $host,
+                    'port' => $port,
+                    'username' => $username,
+                    'password' => $password
+                ];
+                $mail = sendEmail($username, "测试邮箱配置邮件", "邮箱信息配置成功！", $config);
+                if (!$mail->send()) {
+                    $this->result['message'] = $mail->ErrorInfo;
+                    return $this->result;
+                }
+            }
+        }
         foreach ($_POST as $k => $v) {
             $k = trim($k);
             $v = trim($v);
@@ -135,8 +159,8 @@ class AdminAjax extends Common
                 $power = $power | intval($v);
             }
             $data = [
-                'domain' => $domain,
-                'domain_id' => $domain_id,
+                'domain' => trim($domain), //去除多余空格
+                'domain_id' => trim($domain_id),
                 'dns' => $dns,
                 'power' => $power,
                 'add_time' => date("Y-m-d H:i:s")

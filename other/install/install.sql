@@ -53,6 +53,8 @@ CREATE TABLE `pre_users` (
   `user` varchar(16) NOT NULL,
   `pwd` varchar(32) NOT NULL,
   `sid` varchar(32) NOT NULL,
+  `email` varchar(255) DEFAULT NULL,
+  `status` tinyint(2) NOT NULL DEFAULT 1,
   `group` int(11) NOT NULL DEFAULT '1',
   `coin` int(11) NOT NULL DEFAULT '0',
   `add_time` datetime DEFAULT NULL,

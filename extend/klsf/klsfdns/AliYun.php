@@ -154,7 +154,7 @@ class AliYun implements Dns
      */
     public function getRecordLine($_domainId = null, $_domain = null)
     {
-        $str = 'default:默认,telecom:电信,unicom:联通,mobile:移动,oversea:海外,edu:教育网,线路值:线路中文说明,search:搜索引擎,google:谷歌,baidu:百度,biying:必应,youdao:有道，yahoo:雅虎';
+        $str = 'default:默认,telecom:电信,unicom:联通,mobile:移动,oversea:海外,edu:教育网,线路值:线路中文说明,search:搜索引擎,google:谷歌,baidu:百度,biying:必应,youdao:有道,yahoo:雅虎';
         $l1 = explode(',', $str);
         $list = array();
         foreach ($l1 as $str) {

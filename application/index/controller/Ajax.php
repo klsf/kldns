@@ -224,13 +224,22 @@ class Ajax extends Common
 
     public function login()
     {
-        if ($userRow = db("users")->field('uid,user')->where('user', input('post.user'))->where('pwd', passwordEncrypt(input('post.pwd')))->find()) {
-            $sid = createSid();
-            Cookie::set("userSid", $sid);
-            db("users")->where('uid', $userRow['uid'])->update(['sid' => $sid]);
-            $this->result['code'] = 0;
-            $this->result['message'] = '登录成功';
-            $this->result['info'] = $userRow;
+        if ($userRow = db("users")->field('uid,user,status,email')
+            ->where(function ($query) {
+                $query->where('user', input('post.user'))
+                    ->whereOr('email', input('post.user'));
+            })
+            ->where('pwd', passwordEncrypt(input('post.pwd')))->find()) {
+            if ($userRow['status'] == 0) {
+                $this->result['message'] = '账号没有激活，请通过邮箱验证激活！<br><a href="' . url('index/sendValidateEmail') . '?email=' . $userRow['email'] . '">点击重新发送激活邮件至:' . $userRow['email'] . '</a>';
+            } else {
+                $sid = createSid();
+                Cookie::set("userSid", $sid);
+                db("users")->where('uid', $userRow['uid'])->update(['sid' => $sid]);
+                $this->result['code'] = 0;
+                $this->result['message'] = '登录成功';
+                $this->result['info'] = $userRow;
+            }
         } else {
             $this->result['message'] = '账号或者密码错误';
         }
@@ -242,6 +251,8 @@ class Ajax extends Common
         $user = input("post.user");
         $pwd = input("post.pwd");
         $code = input('post.code');
+        $email = input('post.email');
+        $sid = createSid();
         @session_start();
         if (!preg_match('/^[a-zA-Z0-9]{5,16}$/', $user)) {
             $this->result['message'] = '用户名只能包含数字和字母，长度5-16';
@@ -251,12 +262,61 @@ class Ajax extends Common
             $this->result['message'] = '验证码不正确';
         } elseif (db('users')->where('user', $user)->find()) {
             $this->result['message'] = '此用户已被注册';
-        } elseif (db("users")->insert(['user' => $user, 'pwd' => passwordEncrypt($pwd), 'sid' => createSid(), 'add_time' => date("Y-m-d H:i:s"), 'coin' => intval(config('web_reg_coin'))])) {
+        } elseif (db('users')->where('email', $email)->find()) {
+            $this->result['message'] = '此邮箱已注册过账号';
+        } elseif (db("users")->insert(['user' => $user,
+            'pwd' => passwordEncrypt($pwd),
+            'sid' => $sid,
+            'add_time' => date("Y-m-d H:i:s"),
+            'coin' => intval(config('web_reg_coin')),
+            'email' => $email,
+            'status' => config('web_reg_validate') ? 0 : 1
+        ])) {
             unset($_SESSION['vc_code']);//销毁验证码
             $this->result['code'] = 0;
-            $this->result['message'] = '注册成功';
+            if (config('web_reg_validate')) {
+                $url = "http://{$_SERVER['HTTP_HOST']}" . url('index/validateEmail', ['sid' => $sid]);
+                $body = "尊敬的用户：<br>您好，感谢你注册" . config('web_name') . "用户。<br>请点击下面链接进行邮箱验证：<a href='{$url}' target='_blank'>{$url}</a><br>邮箱验证后，你就可以开始使用平台了！";
+                $mail = sendEmail($email, "欢迎您注册" . config('web_name'), $body);
+                if ($mail->send()) {
+                    $this->result['message'] = '注册成功,激活邮件已发送至你邮箱，请查看！';
+                } else {
+                    $this->result['message'] = '注册成功,邮件发送失败：' . $mail->ErrorInfo;
+                }
+            } else {
+                $this->result['message'] = '注册成功';
+            }
         } else {
             $this->result['message'] = '保存数据库失败';
+        }
+        return $this->result;
+    }
+
+    public function password()
+    {
+        $code = input('post.code');
+        @session_start();
+        if (!isset($_SESSION['vc_code']) || $code !== $_SESSION['vc_code']) {
+            $this->result['message'] = '验证码不正确';
+        } elseif (!$user = db("users")->where(function ($query) {
+            $query->where('user', input('post.user'))
+                ->whereOr('email', input('post.user'));
+        })->find()) {
+            $this->result['message'] = '用户不存在';
+        } elseif (strlen($user['email']) < 5) {
+            $this->result['message'] = '此用户没绑定邮箱账号';
+        } else if (!config('web_email_username')) {
+            $this->result['message'] = '站长未配置发送邮件功能';
+        } else {
+            unset($_SESSION['vc_code']);//销毁验证码
+            $url = "http://{$_SERVER['HTTP_HOST']}" . url('index/resetPassword', ['sid' => $user['sid']]);
+            $body = "尊敬的用户：<br>您好，你申请找回密码。<br>请点击下面链接进行密码修改：<a href='{$url}' target='_blank'>{$url}</a>";
+            $mail = sendEmail($user['email'], config('web_name') . " - 找回密码", $body);
+            if ($mail->send()) {
+                $this->result['message'] = '重置密码邮件已发送至你邮箱，请查看！';
+            } else {
+                $this->result['message'] = '邮件发送失败：' . $mail->ErrorInfo;
+            }
         }
         return $this->result;
     }
@@ -265,7 +325,7 @@ class Ajax extends Common
     {
         if (!$this->uid) {
             if ($sid = Cookie::get("userSid")) {
-                if ($info = db('users')->where('sid', $sid)->find()) {
+                if ($info = db('users')->where('sid', $sid)->where('status', 1)->find()) {
                     $this->userInfo = $info;
                     $this->uid = $this->userInfo['uid'];
                 }

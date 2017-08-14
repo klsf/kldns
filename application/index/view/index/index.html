@@ -28,7 +28,7 @@
                 <div class="bg-faded p-3 border-top-0">
                     <form action="{:url('ajax/login')}" method="post" id="loginForm">
                         <div class="form-group">
-                            <input type="text" name="user" placeholder="输入用户名" class="form-control" datatype="s5-15"
+                            <input type="text" name="user" placeholder="输入用户名/邮箱" class="form-control" datatype="*"
                                    required>
                         </div>
                         <div class="form-group">
@@ -37,6 +37,9 @@
                         </div>
                         <div class="form-group">
                             <button type="submit" class="btn btn-primary form-control">登录</button>
+                        </div>
+                        <div class="form-group text-center">
+                            忘记密码？<a href="{:url('password')}">点击找回密码</a>
                         </div>
                     </form>
                 </div>
@@ -49,12 +52,16 @@
                                    required>
                         </div>
                         <div class="form-group">
-                            <input type="password" name="pwd" placeholder="设置密码" class="form-control" datatype="s5-15"
+                            <input type="password" name="pwd" placeholder="设置密码" class="form-control" datatype="*5-15"
                                    id="reg_pwd"
                                    required>
                         </div>
                         <div class="form-group">
                             <input type="password" name="repwd" recheck="pwd" placeholder="再输入一次密码" datatype="s5-15"
+                                   class="form-control" required>
+                        </div>
+                        <div class="form-group">
+                            <input type="text" name="email" placeholder="邮箱账号，找回密码使用" datatype="e"
                                    class="form-control" required>
                         </div>
                         <div class="form-group">
