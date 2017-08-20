@@ -237,7 +237,7 @@ if (pathName.indexOf('control') > 0) {
                         visiblePages: 5,
                         onPageClick: function (event, page) {
                             vm.page = page;
-                            vm.getRecordList();
+                            vm.getDomainList();
                         }
                     });
                 }, function () {
