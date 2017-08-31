@@ -72,6 +72,9 @@ class AdminAjax extends Common
             unset($_POST['act']);
             $host = input('post.email_host');
             $port = input('post.email_port');
+            $charset  = input('post.email_charset');
+            $address  = input('post.email_address');
+            $security = input('post.email_security');
             $username = input('post.email_username');
             $password = input('post.email_password');
             if (!$host || !$port || !$username || !$password) {
@@ -81,10 +84,13 @@ class AdminAjax extends Common
                 $config = [
                     'host' => $host,
                     'port' => $port,
+                    'charset' => $charset,
+                    'address' => $address,
+                    'security' => $security,
                     'username' => $username,
                     'password' => $password
                 ];
-                $mail = sendEmail($username, "测试邮箱配置邮件", "邮箱信息配置成功！", $config);
+                $mail = sendEmail($address, "测试邮箱配置邮件", "邮箱信息配置成功！", $config);
                 if (!$mail->send()) {
                     $this->result['message'] = $mail->ErrorInfo;
                     return $this->result;
