@@ -109,21 +109,25 @@ function sendEmail($email, $subject, $body, $config = [])
     if (empty($config)) $config = [
         'host' => config('web_email_host'),
         'port' => config('web_email_port'),
+        'charset'  => config('web_email_charset'),
+        'address'  => config('web_email_address'),
+        'security' => config('web_email_security'),
         'username' => config('web_email_username'),
         'password' => config('web_email_password')
     ];
     require_once EXTEND_PATH . 'PHPMailer/PHPMailerAutoload.php';
     $mail = new PHPMailer();
+    $mail->CharSet = $config['charset'];
     $mail->isSMTP();                                      // Set mailer to use SMTP
     $mail->Host = $config['host'];  // Specify main and backup SMTP servers
     $mail->SMTPAuth = true;                               // Enable SMTP authentication
     $mail->Username = $config['username'];                 // SMTP username
     $mail->Password = $config['password'];                           // SMTP password
-    $mail->SMTPSecure = 'ssl';                            // Enable TLS encryption, `ssl` also accepted
+    $mail->SMTPSecure = $config['security'];                            // Enable TLS encryption, `ssl` also accepted
     $mail->Port = $config['port'];                                    // TCP port to connect to
     $mail->setLanguage('ch', EXTEND_PATH . '/PHPMailer/language/');
 
-    $mail->setFrom($config['username'], config('web_name'));
+    $mail->setFrom($config['address'], config('web_name'));
     $mail->addAddress($email);
 
     $mail->isHTML(true);                                  // Set email format to HTML
