@@ -31,7 +31,7 @@ CREATE TABLE `pre_dns_apis` (
   `dns` varchar(30) NOT NULL,
   `api_key` varchar(255) NOT NULL,
   `lines` varchar(2000) DEFAULT NULL
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 DROP TABLE IF EXISTS `pre_records`;
 CREATE TABLE `pre_records` (
   `uid` int(11) NOT NULL,
