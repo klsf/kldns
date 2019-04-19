@@ -1,0 +1,196 @@
+[v-cloak] {
+    display: none;
+}
+
+.bd-navbar {
+    min-height: 4rem;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .05), inset 0 -1px 0 rgba(0, 0, 0, .1);
+}
+
+.bd-sidebar {
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .05), inset 0 -1px 0 rgba(0, 0, 0, .1);
+    height: 100%;
+}
+
+.nav-logo-name {
+    color: red;
+    font-weight: bold;
+    font-size: 20px;
+}
+
+.nav-menu {
+    padding-top: 12px;
+    padding-left: 0.2rem !important;
+    color: black;
+}
+
+.menu-link {
+    display: block;
+    height: 3rem;
+    line-height: 3rem;
+    color: black;
+    font-weight: 500;
+    border-bottom: 1px solid gainsboro;
+    padding: 0 1rem;
+}
+
+.menu-link .fa {
+    height: 3rem;
+    line-height: 3rem;
+}
+
+.menu-item a {
+    text-decoration: none;
+}
+
+.menu-item ul {
+    list-style: none;
+    padding: 0 1rem;
+}
+
+.menu-item ul li a {
+    display: block;
+    height: 2rem;
+    line-height: 2rem;
+    color: black;
+    padding: 0 1rem;
+}
+
+.menu-item .collapse {
+    margin: 0 !important;
+    border-bottom: 1px solid gainsboro;
+}
+
+.bd-sidebar {
+    padding: 0;
+}
+
+.bd-sidebar .active a{
+    color: green;
+}
+
+@media (min-width: 576px) {
+    .bd-sidebar {
+        position: sticky;
+        top: 4rem;
+        z-index: 1000;
+        height: calc(100vh - 4rem);
+    }
+    .bd-navbar {
+        position: -webkit-sticky;
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        background: white;
+    }
+}
+
+@media (max-width: 576px) {
+    .container-fluid .row {
+        display: block !important;
+    }
+
+    .bd-content {
+        margin-top: 4rem;
+    }
+
+    .bd-navbar {
+        width: 100%;
+        background: white;
+        height: 4rem;
+        top: 0;
+        position: fixed;
+        z-index: 999;
+    }
+
+    .bd-sidebar {
+        top: 4rem;
+        width: 15rem;
+        position: fixed;
+        overflow-x: hidden;
+        overflow-y: auto;
+        visibility: hidden;
+        z-index: 999;
+    }
+
+    .openMenu {
+        visibility: visible;
+        -webkit-transform: translate(0, 0);
+        -ms-transform: translate(0, 0);
+        -moz-transform: translate(0, 0);
+        -o-transform: translate(0, 0);
+        transform: translate(0, 0);
+        -webkit-transition: all 350ms;
+        -ms-transition: all 350ms;
+        -moz-transition: all 350ms;
+        -o-transition: all 350ms;
+        transition: all 350ms;
+        -webkit-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -o-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+
+    .moveRight {
+        -webkit-transition: all 350ms;
+        -ms-transition: all 350ms;
+        -moz-transition: all 350ms;
+        -o-transition: all 350ms;
+        transition: all 350ms;
+        -webkit-transform: translate3d(250px, 0, 0);
+        -ms-transform: translate3d(250px, 0, 0);
+        -moz-transform: translate3d(250px, 0, 0);
+        -o-transform: translate3d(250px, 0, 0);
+        transform: translate3d(250px, 0, 0);
+        -webkit-transform-origin: 0 0;
+        -ms-transform-origin: 0 0;
+        -moz-transform-origin: 0 0;
+        -o-transform-origin: 0 0;
+        transform-origin: 0 0;
+        -webkit-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -o-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+
+    .moveAnimation {
+        -webkit-transition: all 350ms;
+        -ms-transition: all 350ms;
+        -moz-transition: all 350ms;
+        -o-transition: all 350ms;
+        transition: all 350ms;
+        -webkit-transform: translate3d(0, 0, 0);
+        -ms-transform: translate3d(0, 0, 0);
+        -moz-transform: translate3d(0, 0, 0);
+        -o-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        -webkit-transform-origin: 0 0;
+        -ms-transform-origin: 0 0;
+        -moz-transform-origin: 0 0;
+        -o-transform-origin: 0 0;
+        transform-origin: 0 0;
+        -webkit-backface-visibility: hidden;
+        -ms-backface-visibility: hidden;
+        -moz-backface-visibility: hidden;
+        -o-backface-visibility: hidden;
+        backface-visibility: hidden;
+    }
+}
+
+.input_tips {
+    border: 1px solid #ced4da;
+    padding: .375rem .75rem;
+    border-radius: .25rem;
+    margin-top: 0.25rem;
+    font-size: 12px;
+}
+
+.bd-navbar-index {
+    min-height: 4rem;
+    background-color: #563d7c;
+    box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, .05), inset 0 -1px 0 rgba(0, 0, 0, .1);
+    height: auto;
+    position: relative;
+}
