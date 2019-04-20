@@ -23,7 +23,6 @@ class AdminController extends Controller
         $action = $request->post('action');
         switch ($action) {
             case 'profile':
-                return ['status' => -1, 'message' => '暂不能修改密码！'];
                 return $this->profile($request);
             default:
                 return ['status' => -1, 'message' => '对不起，此操作不存在！'];
