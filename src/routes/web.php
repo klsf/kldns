@@ -34,6 +34,8 @@ Route::get('cache', function () {
     echo "Del cache success!";
 });
 
+Route::get('cron/check/{key}', 'Index\IndexController@autoCheck');
+
 Route::post('check', 'Index\IndexController@check');
 
 Route::prefix('home')->middleware(['auth', 'auth.session:web'])->namespace('Home')->group(function () {
@@ -81,6 +83,9 @@ Route::prefix('admin')->middleware('auth:admin', 'auth.session:admin')->namespac
         });
         Route::get('sys', function () {
             return view('admin.config.sys');
+        });
+        Route::get('check', function () {
+            return view('admin.config.check');
         });
         Route::post('/', 'ConfigController@post');
     });

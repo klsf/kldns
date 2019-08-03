@@ -105,6 +105,8 @@
                                             </option>
                                         </select>
                                     </div>
+                                    <div style="border: 1px solid #ced4da;border-radius: .25rem;padding: .375rem .75rem;margin-top: .25rem;font-size: 14px;color: grey;" v-if="desc"
+                                         v-html="desc"></div>
                                 </div>
                             </div>
                             <div class="form-group row">
@@ -165,11 +167,14 @@
                     line_id: 0
                 },
                 selectDid: 0,
+                desc: ''
             },
             methods: {
                 getDomainPoint: function () {
+                    var vm = this;
                     for (var i = 0; i < this.domainList.length; i++) {
                         if (this.domainList[i].did === this.storeInfo.did) {
+                            vm.desc = this.domainList[i].desc;
                             return this.domainList[i].point;
                         }
                     }

@@ -30,6 +30,8 @@ class LoginController extends Controller
         $user = $this->guard()->user();
         if ($user->status == 0) {
             return ['status' => -1, 'message' => '对不起，账户已被禁用！'];
+        } elseif ($this->guardName != 'admin' && $user->gid == 99) {
+            return ['status' => -1, 'message' => '账号或者密码不正确'];
         } else {
             $request->session()->regenerate();
             $this->clearLoginAttempts($request);

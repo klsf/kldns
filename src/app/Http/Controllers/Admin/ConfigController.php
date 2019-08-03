@@ -11,6 +11,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Helper;
 use App\Models\Config;
+use App\Models\DomainRecord;
 use Illuminate\Http\Request;
 
 class ConfigController extends Controller
@@ -19,6 +20,10 @@ class ConfigController extends Controller
     {
         $action = $request->post('action');
         switch ($action) {
+            case 'changeKey':
+                return $this->changeKey($request);
+            case 'getKeywordsInfo':
+                return $this->getKeywordsInfo($request);
             case 'config':
                 return $this->config($request);
             default:
@@ -26,6 +31,29 @@ class ConfigController extends Controller
         }
     }
 
+    private function changeKey(Request $request)
+    {
+        $key = md5(uniqid() . rand(100, 999));
+        Config::updateOrCreate(['k' => 'cronKey'], ['v' => $key]);
+        return ['status' => 0, 'message' => '更换成功', 'key' => $key];
+    }
+
+    private function getKeywordsInfo(Request $request)
+    {
+        $key = \config('sys.cronKey');
+        if (strlen($key) != 32) {
+            $key = md5(uniqid() . rand(100, 999));
+            Config::updateOrCreate(['k' => 'cronKey'], ['v' => $key]);
+        }
+        $checked_at = null;
+        if ($record = DomainRecord::select('*')->orderBy('checked_at', 'desc')->first()) {
+            $checked_at = $record->checked_at;
+        }
+        return ['status' => 0, 'message' => '', 'data' => [
+            'key' => $key,
+            'checked_at' => date("Y-m-d H:i:s", $checked_at)
+        ]];
+    }
 
     private function config(Request $request)
     {

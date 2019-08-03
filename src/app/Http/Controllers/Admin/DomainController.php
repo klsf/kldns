@@ -73,6 +73,7 @@ class DomainController extends Controller
         $did = intval($request->post('did'));
         $groups = $request->post('groups');
         $point = abs(intval($request->post('point')));
+        $desc = $request->post('desc');
 
         if (!$did || !$row = Domain::find($did)) {
             $result['message'] = '域名不存在';
@@ -84,6 +85,7 @@ class DomainController extends Controller
             }
             $row->groups = implode(',', $groups);
             $row->point = $point;
+            $row->desc = $desc;
             if ($row->save()) {
                 $result = ['status' => 0, 'message' => '修改成功'];
             } else {
@@ -99,6 +101,7 @@ class DomainController extends Controller
         $dns = $request->post('dns');
         $domain = $request->post('domain');
         $domain = explode(',', trim($domain));
+        $desc = $request->post('desc');
         $groups = $request->post('groups');
         $point = abs(intval($request->post('point')));
 
@@ -126,6 +129,7 @@ class DomainController extends Controller
                     'domain_id' => $domain[0],
                     'dns' => $dns,
                     'groups' => implode(',', $groups),
+                    'desc' => $desc,
                     'point' => $point
                 ])) {
                     $result = ['status' => 0, 'message' => '添加成功'];

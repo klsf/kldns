@@ -16,6 +16,7 @@ use App\Models\DomainRecord;
 use App\Models\User;
 use Gregwar\Captcha\CaptchaBuilder;
 use Gregwar\Captcha\PhraseBuilder;
+use GuzzleHttp\Client;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Hash;
@@ -24,6 +25,73 @@ use Illuminate\Support\Str;
 
 class IndexController extends Controller
 {
+    public function autoCheck(Request $request, $key)
+    {
+        if (strlen($key) != 32 || config('sys.cronKey') !== $key) {
+            exit('监控密匙不正确！');
+        } else {
+            $start = time();
+            $keywords = config('sys.keywords');
+            $keywords = explode("
+", $keywords);
+            $_keywords = [];
+            foreach ($keywords as $k) {
+                $k = trim($k);
+                if (strlen($k) > 1) {
+                    $_keywords[] = $k;
+                }
+            }
+            if (empty($_keywords)) {
+                exit('未配置检测关键词！');
+            }
+
+            $client = new Client([
+                'timeout' => 10,
+                'http_errors' => false,
+                'verify' => false,
+                'headers' => [
+                    'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.142 Safari/537.36'
+                ]
+            ]);
+            echo "开始检测----" . date("Y-m-d H:i:s") . "<br>\r\n";
+            while ($record = DomainRecord::with('domain')->where('checked_at', '<', $start - 300)->orderBy('checked_at', 'asc')->first()) {
+                $record->checked_at = time();
+                $record->save();
+                $del = false;
+
+                if (!$record->domain) {
+                    echo "{$record->id}----域名不存在<br>\r\n";
+                } else {
+                    $domain = $record->name . '.' . $record->domain->domain;
+                    try {
+                        $res = $client->get('http://' . $domain);
+                        $body = (string)$res->getBody();
+                        foreach ($_keywords as $k) {
+                            if (strpos($body, $k) > -1) {
+                                //包含关键词，直接删除
+                                Helper::deleteRecord($record);
+                                echo "{$record->id}----{$domain}----del:{$k}<br>\r\n";
+                                $record->delete();
+                                $del = true;
+                                break;
+                            }
+                        }
+                        if (!$del) {
+                            echo "{$record->id}----{$domain}----ok<br>\r\n";
+                        }
+                    } catch (\Exception $e) {
+                        echo "{$record->id}----{$domain}----{$e->getMessage()}<br>\r\n";
+                    }
+                }
+
+                if (time() - $start > 25) {
+                    break;
+                }
+            }
+        }
+
+    }
+
     public function password(Request $request)
     {
         if ($request->method() === 'POST') {

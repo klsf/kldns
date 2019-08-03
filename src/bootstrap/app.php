@@ -53,8 +53,6 @@ $app->singleton(
 */
 
 $app->afterBootstrapping(\Illuminate\Foundation\Bootstrap\LoadConfiguration::class, function ($app) {
-    config(['version' => '3.0.1']);
-
     $uri = null;
     if (!$app->runningInConsole()) {
         $uri = request()->getRequestUri();
@@ -75,7 +73,6 @@ $app->afterBootstrapping(\Illuminate\Foundation\Bootstrap\LoadConfiguration::cla
         $mysql['password'] = config('mysql.password');
         $mysql['prefix'] = config('mysql.prefix');
         config(['database.connections.mysql' => $mysql]);
-
     }
 });
 

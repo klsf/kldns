@@ -195,6 +195,7 @@ class HomeController extends Controller
                         'did' => $domain->did,
                         'domain' => $domain->domain,
                         'point' => $domain->point,
+                        'desc' => $domain->desc,
                         'line' => $_dns->getRecordLine()
                     ];
                 }

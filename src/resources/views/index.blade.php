@@ -39,6 +39,7 @@
                         ]</span>
                 </a>
                 <div class="dropdown-menu" style="left: auto" aria-labelledby="user_btns">
+                    <a class="dropdown-item" href="/home">解析记录</a>
                     <a class="dropdown-item" href="/home/profile">修改密码</a>
                     <a class="dropdown-item" href="/logout" onclick="return confirm('确认退出登录？');">退出登录</a>
                 </div>

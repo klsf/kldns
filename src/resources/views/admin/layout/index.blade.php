@@ -61,6 +61,11 @@
                         </a>
                     </li>
                     <li>
+                        <a href="/admin/config/check">
+                            <i class="fa fa-caret-right"></i> 自动检测
+                        </a>
+                    </li>
+                    <li>
                         <a href="/admin/config/dns">
                             <i class="fa fa-caret-right"></i> 接口配置
                         </a>

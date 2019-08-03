@@ -19,6 +19,7 @@
                             <th>域名</th>
                             <th title="可使用此域名的用户组">用户组</th>
                             <th>消耗积分</th>
+                            <th>介绍</th>
                             <th>添加时间</th>
                             <th>操作</th>
                         </tr>
@@ -31,6 +32,7 @@
                             <td>@{{ row.domain }}</td>
                             <td v-html="getDomainGroups(row.groups)"></td>
                             <td>@{{ row.point }}</td>
+                            <td v-html="row.desc"></td>
                             <td>@{{ row.created_at }}</td>
                             <td>
                                 <a href="#modal-update" class="btn btn-sm btn-info" data-toggle="modal"
@@ -114,6 +116,13 @@
                                     <input type="number" name="point" placeholder="输入用户添加每条解析消耗积分" class="form-control">
                                 </div>
                             </div>
+                            <div class="form-group row">
+                                <label for="staticEmail" class="col-sm-3 col-form-label">域名介绍</label>
+                                <div class="col-sm-9">
+                                    <textarea name="desc" rows="5" placeholder="输入域名介绍内容"
+                                              class="form-control"></textarea>
+                                </div>
+                            </div>
                         </form>
                     </div>
                     <div class="modal-footer">
@@ -165,6 +174,13 @@
                                 <div class="col-sm-9">
                                     <input type="number" name="point" placeholder="输入用户添加每条解析消耗积分" class="form-control"
                                            :value="storeInfo.point">
+                                </div>
+                            </div>
+                            <div class="form-group row">
+                                <label for="staticEmail" class="col-sm-3 col-form-label">域名介绍</label>
+                                <div class="col-sm-9">
+                                    <textarea name="desc" rows="5" placeholder="输入域名介绍内容" class="form-control"
+                                              :value="storeInfo.desc"></textarea>
                                 </div>
                             </div>
                         </form>

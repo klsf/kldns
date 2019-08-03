@@ -1,6 +1,6 @@
 DROP TABLE IF EXISTS `kldns_configs`;
 CREATE TABLE `kldns_configs` (
-  `k` varchar(255) NOT NULL,
+  `k` varchar(150) NOT NULL,
   `v` text,
   PRIMARY KEY (`k`),
   UNIQUE KEY `k` (`k`)
@@ -14,7 +14,7 @@ INSERT INTO `kldns_configs` VALUES ('index_urls', '源码下载|https://github.c
 INSERT INTO `kldns_configs` VALUES ('reserve_domain_name', 'www,w,m,3g,4g,qq');
 DROP TABLE IF EXISTS `kldns_dns_configs`;
 CREATE TABLE `kldns_dns_configs` (
-  `dns` varchar(255) NOT NULL,
+  `dns` varchar(150) NOT NULL,
   `config` varchar(1024) DEFAULT NULL,
   `created_at` int(10) unsigned DEFAULT NULL,
   `updated_at` int(10) unsigned DEFAULT NULL,
@@ -26,34 +26,36 @@ CREATE TABLE `kldns_domain_records` (
   `uid` int(10) unsigned NOT NULL DEFAULT '0',
   `did` int(11) unsigned NOT NULL DEFAULT '0',
   `record_id` varchar(50) NOT NULL,
-  `name` varchar(255) NOT NULL,
+  `name` varchar(100) NOT NULL,
   `type` varchar(32) NOT NULL,
   `value` varchar(255) NOT NULL,
   `line_id` varchar(32) NOT NULL DEFAULT '0',
   `line` varchar(255) DEFAULT NULL,
   `created_at` int(10) unsigned DEFAULT NULL,
   `updated_at` int(10) unsigned DEFAULT NULL,
+  `checked_at` int(10) unsigned NOT NULL DEFAULT '0',
   PRIMARY KEY (`id`),
   KEY `uid` (`uid`),
   KEY `record_id` (`record_id`),
   KEY `did` (`did`),
-  KEY `name` (`name`,`type`)
+  KEY `name` (`name`,`type`),
+  KEY `checked_at` (`checked_at`)
 ) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8;
 DROP TABLE IF EXISTS `kldns_domains`;
 CREATE TABLE `kldns_domains` (
   `did` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `dns` varchar(32) NOT NULL,
   `domain_id` varchar(50) NOT NULL,
-  `domain` varchar(255) NOT NULL,
+  `domain` varchar(50) NOT NULL,
   `groups` varchar(1024) NOT NULL DEFAULT '0',
   `point` int(10) unsigned NOT NULL DEFAULT '0',
+  `desc` text,
   `created_at` int(10) unsigned DEFAULT NULL,
   `updated_at` int(10) unsigned DEFAULT NULL,
   PRIMARY KEY (`did`),
   KEY `domain` (`domain`),
   KEY `domain_id` (`domain_id`),
-  KEY `dns` (`dns`),
-  KEY `power` (`groups`)
+  KEY `dns` (`dns`)
 ) ENGINE=InnoDB AUTO_INCREMENT=100 DEFAULT CHARSET=utf8;
 DROP TABLE IF EXISTS `kldns_user_groups`;
 CREATE TABLE `kldns_user_groups` (
@@ -83,11 +85,11 @@ CREATE TABLE `kldns_users` (
   `uid` int(10) unsigned NOT NULL AUTO_INCREMENT,
   `gid` int(10) unsigned NOT NULL DEFAULT '100',
   `status` tinyint(2) unsigned NOT NULL DEFAULT '0' COMMENT '0禁用 1待认证 2已认证',
-  `username` varchar(255) NOT NULL,
+  `username` varchar(50) NOT NULL,
   `password` varchar(255) NOT NULL,
   `remember_token` varchar(255) DEFAULT NULL,
   `sid` varchar(32) NOT NULL,
-  `email` varchar(255) DEFAULT NULL,
+  `email` varchar(100) DEFAULT NULL,
   `point` int(10) unsigned NOT NULL DEFAULT '0',
   `created_at` int(10) unsigned DEFAULT NULL,
   `updated_at` int(10) unsigned DEFAULT NULL,

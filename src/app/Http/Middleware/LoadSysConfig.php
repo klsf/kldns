@@ -9,6 +9,7 @@
 namespace App\Http\Middleware;
 
 
+use App\Http\Controllers\InstallController;
 use App\Models\Config;
 use Closure;
 use Illuminate\Http\Request;
@@ -24,6 +25,9 @@ class LoadSysConfig
         if ($uri === '/install' || $uri === '/install/') {
 
         } else {
+            $c = new InstallController();
+            $c->update();//更新数据库
+
             $this->loadSysConfig($request);
         }
         return $next($request);
