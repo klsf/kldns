@@ -12,7 +12,7 @@
 namespace phpDocumentor\Reflection;
 
 /**
- * Interface for Api Elements
+ * Interface for WestApi Elements
  */
 interface Element
 {

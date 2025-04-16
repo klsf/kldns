@@ -21,7 +21,7 @@ class Helper
         $files = scandir($dir);
         foreach ($files as $file) {
             $file = explode('.', $file);
-            if ($file[1] === 'php' && !in_array($file[0], ['DnsHttp', 'Helper', 'DnsInterface'])) {
+            if ($file[1] === 'php' && !in_array($file[0], ['DnsHttp', 'Helper', 'DnsInterface', 'WestApi'])) {
                 $list[] = $file[0];
             }
         }

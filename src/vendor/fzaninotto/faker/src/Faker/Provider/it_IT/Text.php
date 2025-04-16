@@ -86,7 +86,7 @@ class Text extends \Faker\Provider\Text
      * XXI Pinocchio è preso da un contadino, il quale lo costringe a far da can da guardia a un pollaio.
      * XXII Pinocchio scuopre i ladri e, in ricompensa di essere stato fedele, vien posto in libertà.
      * XXIII Pinocchio piange la morte della bella Bambina dai capelli turchini: poi trova un Colombo che lo porta sulla riva del mare, e lì si getta nell’acqua per andare in aiuto del suo babbo Geppetto.
-     * XXIV Pinocchio arriva all’isola delle Api industriose e ritrova la Fata.
+     * XXIV Pinocchio arriva all’isola delle WestApi industriose e ritrova la Fata.
      * XXV Pinocchio promette alla Fata di essere buono e di studiare, perché è stufo di fare il burattino e vuol diventare un bravo ragazzo.
      * XXVI Pinocchio va co’ suoi compagni di scuola in riva al mare, per vedere il terribile Pescecane.
      * XXVII Gran combattimento fra Pinocchio e i suoi compagni: uno de’ quali essendo rimasto ferito, Pinocchio viene arrestato dai carabinieri.
@@ -1007,7 +1007,7 @@ Quand’ecco che udirono un urlo disperato, e, voltandosi indietro, videro un ra
 Pinocchio, essendo tutto di legno, galleggiava facilmente e nuotava come un pesce. Ora si vedeva sparire sott’acqua, portato dall’impeto dei flutti, ora riappariva fuori con una gamba o con un braccio, a grandissima distanza dalla terra. Alla fine lo persero d’occhio e non lo videro più.
 – Povero ragazzo! - dissero allora i pescatori, che erano raccolti sulla spiaggia: e brontolando sottovoce una preghiera tornarono alle loro case.
 
-XXIV Pinocchio arriva all’isola delle Api industriose e ritrova la Fata.
+XXIV Pinocchio arriva all’isola delle WestApi industriose e ritrova la Fata.
 
 Pinocchio, animato dalla speranza di arrivare in tempo a dare aiuto al suo povero babbo, nuotò tutta quanta la notte.
 E che orribile nottata fu quella! Diluviò, grandinò, tuonò spaventosamente, e con certi lampi che pareva di giorno.
@@ -1036,7 +1036,7 @@ Non sapendo come chiamarlo per nome, il burattino gli gridò a voce alta, per fa
 – Se gli è grosso!... – replicò il Delfino. – Perché tu possa fartene un’idea, ti dirò che è più grosso di un casamento di cinque piani, ed ha una boccaccia così larga e profonda, che ci passerebbe comodamente tutto il treno della strada ferrata colla macchina accesa.
 – Mamma mia! – gridò spaventato il burattino: e rivestitosi in fretta e furia, si voltò al delfino e gli disse: – Arrivedella, signor pesce: scusi tanto l’incomodo e mille grazie della sua garbatezza.
 Detto ciò, prese subito la viottola e cominciò a camminare di un passo svelto; tanto svelto, che pareva quasi che corresse. E a ogni più piccolo rumore che sentiva, si voltava subito a guardare indietro, per la paura di vedersi inseguire da quel terribile pesce-cane grosso come una casa di cinque piani e con un treno della strada ferrata in bocca.
-Dopo mezz’ora di strada, arrivò a un piccolo paese detto «Il paese delle Api industriose». Le strade formicolavano di persone che correvano di qua e di là per le loro faccende: tutti lavoravano, tutti avevano qualche cosa da fare. Non si trovava un ozioso o un vagabondo nemmeno a cercarlo col lumicino.
+Dopo mezz’ora di strada, arrivò a un piccolo paese detto «Il paese delle WestApi industriose». Le strade formicolavano di persone che correvano di qua e di là per le loro faccende: tutti lavoravano, tutti avevano qualche cosa da fare. Non si trovava un ozioso o un vagabondo nemmeno a cercarlo col lumicino.
 – Ho capito, – disse subito quello svogliato di Pinocchio, – questo paese non è fatto per me! Io non son nato per lavorare!
 Intanto la fame lo tormentava, perché erano oramai passate ventiquattr’ore che non aveva mangiato più nulla; nemmeno una pietanza di veccie.
 Che fare?

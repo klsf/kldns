@@ -115,6 +115,7 @@
                                     <select class="form-control" name="type" v-model="storeInfo.type">
                                         <option value="A">A</option>
                                         <option value="CNAME">CNAME</option>
+                                        <option value="TXT">TXT</option>
                                     </select>
                                 </div>
                             </div>
