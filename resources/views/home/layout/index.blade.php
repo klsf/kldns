@@ -6,9 +6,9 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title') - {{ config('sys.web.name') }}</title>
     @php($assetVersion = filemtime(public_path('css/style.css')).'-'.filemtime(public_path('js/main.js')))
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.8.1/css/all.min.css" rel="stylesheet">
-    <link href="https://unpkg.com/element-plus/dist/index.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.8.1/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.css" rel="stylesheet">
     <link href="/css/style.css?v={{ $assetVersion }}" rel="stylesheet">
     @yield('head')
 </head>
@@ -68,8 +68,8 @@
         @yield('content')
     </main>
 </div>
-<script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
-<script src="https://unpkg.com/element-plus/dist/index.full.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/vue/3.5.13/vue.global.prod.min.js"></script>
+<script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.full.min.js"></script>
 <script src="/js/main.js?v={{ $assetVersion }}"></script>
 @yield('foot')
 </html>
