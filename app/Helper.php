@@ -124,11 +124,15 @@ class Helper
                 $message = $message ? mb_convert_encoding($e->getMessage(), 'UTF-8') : '发送邮件出错！';
                 return [false, $message];
             }
-            if (count(Mail::failures()) < 1) {
-                return [true, null];
-            } else {
-                return [false, Mail::failures()];
+
+            if (method_exists(Mail::getFacadeRoot(), 'failures')) {
+                $failures = Mail::failures();
+                if (!empty($failures)) {
+                    return [false, implode(',', $failures)];
+                }
             }
+
+            return [true, null];
         }
     }
 

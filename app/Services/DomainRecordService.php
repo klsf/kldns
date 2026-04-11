@@ -45,13 +45,17 @@ class DomainRecordService
             return [false, '请输入记录值', null];
         }
 
-        if (!$id && DomainRecord::where('did', $data['did'])->where('name', $data['name'])->where('uid', '!=', $user->uid)->where('line_id', $data['line_id'])->first()) {
-            return [false, '此主机记录已被使用', null];
-        }
-
         $domain = Domain::available($user->gid)->where('did', $data['did'])->first();
         if (!$domain) {
             return [false, '域名不存在，或无此权限', null];
+        }
+
+        if ($this->hasRecordConflict($data['did'], $data['name'], $record ? $record->id : 0)) {
+            return [false, '此主机记录已被使用', null];
+        }
+
+        if ($this->hasPendingReviewConflict($data['did'], $data['name'], $record ? $record->id : 0)) {
+            return [false, '此主机记录已有待审核申请', null];
         }
 
         if (!in_array($data['type'], $domain->record_type_list, true)) {
@@ -345,5 +349,39 @@ class DomainRecordService
         }
 
         return [false, '更新失败，请稍后再试', null];
+    }
+
+    private function hasRecordConflict(int $did, string $name, int $ignoreId = 0): bool
+    {
+        $query = DomainRecord::where('did', $did)->where('name', $name);
+
+        if ($ignoreId > 0) {
+            $query->where('id', '!=', $ignoreId);
+        }
+
+        return $query->exists();
+    }
+
+    private function hasPendingReviewConflict(int $did, string $name, int $ignoreRecordLocalId = 0): bool
+    {
+        $reviews = DomainRecordReview::where('did', $did)
+            ->where('status', DomainRecordReview::STATUS_PENDING)
+            ->whereIn('action', [DomainRecordReview::ACTION_CREATE, DomainRecordReview::ACTION_UPDATE])
+            ->get();
+
+        foreach ($reviews as $review) {
+            $payload = $review->payload;
+            if (($payload['name'] ?? '') !== $name) {
+                continue;
+            }
+
+            if ($ignoreRecordLocalId > 0 && intval($review->record_local_id) === $ignoreRecordLocalId) {
+                continue;
+            }
+
+            return true;
+        }
+
+        return false;
     }
 }

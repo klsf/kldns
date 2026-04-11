@@ -8,7 +8,7 @@ use PDO;
 
 class InstallController extends Controller
 {
-    private string $version = '4.0.1';
+    private string $version = '4.0.2';
 
     private function installConfigPath(string $file): string
     {

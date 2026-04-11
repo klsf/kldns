@@ -1,4 +1,4 @@
-# KLDNS 4.0.1
+# KLDNS 4.0.2
 
 KLDNS 是一个面向二级域名分发场景的 DNS 管理系统，适用于主域开放、用户自助申请前缀、解析记录维护、积分控制、审核流和统一运维管理。
 
@@ -73,10 +73,10 @@ location / {
 
 ## 升级说明
 
-如果你是从旧版本升级到 `4.0.1`，建议至少确认以下内容：
+如果你是从旧版本升级到 `4.0.2`，建议至少确认以下内容：
 
 1. 已执行对应升级 SQL。
-2. `storage/install/version.php` 已更新到 `4.0.1`。
+2. `storage/install/version.php` 已更新到 `4.0.2`。
 3. `kldns_domains` 表已存在以下字段：
    - `record_types`
    - `review_mode`
@@ -136,7 +136,7 @@ ADD COLUMN `beian` tinyint(1) unsigned NOT NULL DEFAULT '0' AFTER `review_mode`;
 - `install/`：安装 SQL 与升级 SQL
 - `storage/install/`：安装后的数据库配置与版本信息
 
-## 4.0.1 版本更新
+## 4.0.2 版本更新
 
 - 前后台统一重构到 Vue 3 + Element Plus
 - 移除 jQuery 和 layer 依赖

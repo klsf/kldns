@@ -5,10 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>程序安装 - {{ config('app.name') }}</title>
-    @php($assetVersion = (config('version') ?: '4.0.1').'-20260328')
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.8.1/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.css" rel="stylesheet">
+    @php($assetVersion = (config('version') ?: '4.0.2').'-20260328')
+    <link href="/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/vendor/font-awesome/css/all.min.css" rel="stylesheet">
+    <link href="/vendor/element-plus/index.css" rel="stylesheet">
     <link href="/css/style.css?v={{ $assetVersion }}" rel="stylesheet">
 </head>
 <body class="page-shell">
@@ -112,8 +112,8 @@
         </section>
     </div>
 </main>
-<script src="https://cdn.bootcdn.net/ajax/libs/vue/3.5.13/vue.global.prod.min.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.full.min.js"></script>
+<script src="/vendor/vue/vue.global.prod.min.js"></script>
+<script src="/vendor/element-plus/index.full.min.js"></script>
 <script src="/js/main.js?v={{ $assetVersion }}"></script>
 <script>
     createVuePage('#vue', {

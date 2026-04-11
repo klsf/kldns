@@ -8,9 +8,9 @@
     <meta name="keywords" content="{{ config('app.name') }}"/>
     <meta name="description" content="{{ config('app.name') }}"/>
     @php($assetVersion = filemtime(public_path('css/style.css')).'-'.filemtime(public_path('js/main.js')))
-    <link href="https://cdn.bootcdn.net/ajax/libs/twitter-bootstrap/4.3.1/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/font-awesome/5.8.1/css/all.min.css" rel="stylesheet">
-    <link href="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.css" rel="stylesheet">
+    <link href="/vendor/bootstrap/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/vendor/font-awesome/css/all.min.css" rel="stylesheet">
+    <link href="/vendor/element-plus/index.css" rel="stylesheet">
     <link href="/css/style.css?v={{ $assetVersion }}" rel="stylesheet">
     @yield('head')
 </head>
@@ -78,8 +78,8 @@
         @yield('content')
     </main>
 </div>
-<script src="https://cdn.bootcdn.net/ajax/libs/vue/3.5.13/vue.global.prod.min.js"></script>
-<script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.9.8/index.full.min.js"></script>
+<script src="/vendor/vue/vue.global.prod.min.js"></script>
+<script src="/vendor/element-plus/index.full.min.js"></script>
 <script src="/js/main.js?v={{ $assetVersion }}"></script>
 @yield('foot')
 </html>
