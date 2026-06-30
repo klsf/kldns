@@ -11,10 +11,10 @@ import (
 )
 
 type AuthRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewAuthRepository(db *sql.DB) *AuthRepository {
+func NewAuthRepository(db *Database) *AuthRepository {
 	return &AuthRepository{DB: db}
 }
 

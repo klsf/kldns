@@ -28,7 +28,7 @@ func (c *InstallController) CreateAdmin() {
 		Password string `json:"password"`
 		Email    string `json:"email"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}

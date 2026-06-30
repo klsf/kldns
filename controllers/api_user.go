@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"kldns/app"
-	"kldns/middlewares"
+	"kldns/middleware"
 	"kldns/models"
 	"kldns/pkg/auth"
 	"kldns/pkg/dns"
@@ -23,7 +23,7 @@ type DomainAPIController struct {
 }
 
 func (c *DomainAPIController) Get() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -49,7 +49,7 @@ func (c *DomainAPIController) Public() {
 }
 
 func enrichDomainLines(ctx context.Context, items []repositories.DomainSummary) {
-	resolver := services.DBProviderResolver{}
+	resolver := providerResolver()
 	for i := range items {
 		items[i].Line = []dns.RecordLine{{ID: "0", Name: "默认"}}
 		provider, err := resolver.Resolve(ctx, models.Domain{
@@ -102,7 +102,7 @@ type RecordAPIController struct {
 }
 
 func (c *RecordAPIController) Get() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -121,7 +121,7 @@ func (c *RecordAPIController) Get() {
 }
 
 func (c *RecordAPIController) Post() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -134,13 +134,13 @@ func (c *RecordAPIController) Post() {
 		Value       string `json:"value"`
 		LineID      string `json:"line_id"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
 	service := services.RecordService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	result, appErr := service.Submit(c.Ctx.Request.Context(), services.SubmitRecordInput{
@@ -161,12 +161,12 @@ func (c *RecordAPIController) Post() {
 }
 
 func (c *RecordAPIController) Put() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	id, _ := strconv.ParseInt(c.Ctx.Param("id"), 10, 64)
 	var input struct {
 		DID         int64  `json:"did"`
 		SubdomainID int64  `json:"subdomain_id"`
@@ -175,13 +175,13 @@ func (c *RecordAPIController) Put() {
 		Value       string `json:"value"`
 		LineID      string `json:"line_id"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
 	service := services.RecordService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	result, appErr := service.Submit(c.Ctx.Request.Context(), services.SubmitRecordInput{
@@ -196,15 +196,15 @@ func (c *RecordAPIController) Put() {
 }
 
 func (c *RecordAPIController) Delete() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	id, _ := strconv.ParseInt(c.Ctx.Param("id"), 10, 64)
 	service := services.RecordService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	result, appErr := service.Delete(c.Ctx.Request.Context(), user.ID, id, "api")
@@ -220,7 +220,7 @@ type SubdomainAPIController struct {
 }
 
 func (c *SubdomainAPIController) Get() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -234,7 +234,7 @@ func (c *SubdomainAPIController) Get() {
 }
 
 func (c *SubdomainAPIController) Post() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -243,7 +243,7 @@ func (c *SubdomainAPIController) Post() {
 		DID  int64  `json:"did"`
 		Name string `json:"name"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
@@ -262,16 +262,16 @@ func (c *SubdomainAPIController) Post() {
 }
 
 func (c *SubdomainAPIController) Delete() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	id, _ := strconv.ParseInt(c.Ctx.Param("id"), 10, 64)
 	var input struct {
 		ConfirmFullDomain string `json:"confirm_full_domain"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
@@ -297,7 +297,7 @@ type PointsAPIController struct {
 }
 
 func (c *PointsAPIController) Get() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -311,7 +311,7 @@ func (c *PointsAPIController) Get() {
 }
 
 func (c *TokenAPIController) Get() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -325,7 +325,7 @@ func (c *TokenAPIController) Get() {
 }
 
 func (c *TokenAPIController) Post() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -334,7 +334,7 @@ func (c *TokenAPIController) Post() {
 		Name string `json:"name"`
 		Days int    `json:"days"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
@@ -365,12 +365,12 @@ func (c *TokenAPIController) Post() {
 }
 
 func (c *TokenAPIController) Delete() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	id, _ := strconv.ParseInt(c.Ctx.Input.Param(":id"), 10, 64)
+	id, _ := strconv.ParseInt(c.Ctx.Param("id"), 10, 64)
 	deleted, err := repositories.NewAPIRepository(app.DB()).DeleteToken(c.Ctx.Request.Context(), user.ID, id)
 	if err != nil {
 		c.Internal("删除令牌失败")

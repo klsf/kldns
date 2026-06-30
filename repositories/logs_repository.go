@@ -2,15 +2,14 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 )
 
 // LogsRepository handles operation log data access.
 type LogsRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewLogsRepository(db *sql.DB) *LogsRepository {
+func NewLogsRepository(db *Database) *LogsRepository {
 	return &LogsRepository{DB: db}
 }
 

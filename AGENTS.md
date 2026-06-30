@@ -15,7 +15,7 @@ KLDNS 是面向二级域名分发场景的 DNS 管理系统，核心能力包括
 
 本次重构目标技术栈：
 
-- 后端：Golang + Beego + SQLite3。
+- 后端：Golang + Gin + GORM + SQLite3。
 - 前端：Vite + Vue 3 + Element Plus。
 - 数据库：SQLite3，必须配套可追踪的迁移脚本。
 
@@ -31,18 +31,18 @@ KLDNS 是面向二级域名分发场景的 DNS 管理系统，核心能力包括
 
 ## 推荐目录结构
 
-项目目录按 Beego 推荐结构放在仓库根目录，不额外包一层 `backend/`，只新增 `web/` 目录放前端代码：
+项目目录按 Gin + MVC 分层放在仓库根目录，不额外包一层 `backend/`，不新增 `internal/` 或 `cmd/`，只保留 `web/` 目录放前端代码：
 
 ```text
-main.go                  # Beego 程序入口，只负责启动和基础装配
-conf/                    # Beego 配置文件
-controllers/             # Beego 控制器，只处理 HTTP 入参和响应
+main.go                  # Gin 程序入口，只负责启动和基础装配
+config/                  # YAML 配置文件和配置加载代码
+controllers/             # Gin 控制器，只处理 HTTP 入参和响应
 models/                  # 数据模型和领域结构
-routers/                 # Beego 路由注册
+routes/                  # Gin 路由注册
 services/                # 业务用例和事务边界
 repositories/            # 数据访问，封装 SQLite 查询
 dto/                     # 请求和响应结构
-middlewares/             # 鉴权、日志、限流、恢复等中间件
+middleware/              # 鉴权、日志、限流、恢复等中间件
 pkg/                     # 可复用基础包
   auth/                  # 登录、会话、Token、权限判断
   dns/                   # DNS 平台统一接口和适配器
@@ -63,8 +63,8 @@ pkg/                     # 可复用基础包
 jobs/                    # 定时任务、清理
 migrations/              # SQLite 迁移脚本
 tests/                   # 集成测试、测试夹具
-static/                  # Beego 静态资源；前端工程源码不要放这里
-views/                   # Beego 视图目录；前后端分离时尽量保持为空或只放必要模板
+static/                  # 可选静态资源；前端工程源码不要放这里
+views/                   # 可选模板目录；前后端分离时尽量保持为空或只放必要模板
 web/                     # Vite + Vue 3 + Element Plus 前端工程
 ```
 
@@ -105,21 +105,21 @@ web/
 - Service 承载业务规则，例如二级域名注册扣费、DNS 同步、权限校验、日志记录。
 - Repository 只处理数据读写，不夹带 HTTP、DNS API 或页面逻辑。
 - DNS 平台必须通过统一接口接入，例如 `Provider`、`RecordManager`、`ZoneManager`；新增平台只能增加适配器，不要修改业务流程代码。
-- 数据库访问必须使用参数化查询或 ORM 安全能力，禁止拼接用户输入形成 SQL。
+- 数据库访问优先使用 GORM；复杂查询保留 raw SQL 时必须使用参数化查询或 GORM 安全能力，禁止拼接用户输入形成 SQL。
 - SQLite 写入要考虑事务；同一个业务动作涉及多表时必须放在同一个事务中。
 - 统一错误返回格式，业务错误要有稳定错误码，不要到处返回裸字符串。
 - 所有时间使用明确时区策略；数据库建议存 UTC 或 Unix 时间戳，展示层再转换。
 - 密码、Token、DNS 密钥必须加密或哈希存储；日志中禁止输出明文密钥、Token、密码。
 - API 权限检查必须靠后端完成，前端隐藏按钮不能替代后端授权。
 
-## Beego 约束
+## Gin 约束
 
-- 保持 Beego 推荐的根目录结构，不要新增 `backend/` 包裹后端代码，也不要使用 `internal/` 重建一套目录。
-- 路由注册集中放在 `routers`，不要散落在控制器文件里。
+- 保持 Gin + MVC 的根目录结构，不要新增 `backend/` 包裹后端代码，也不要使用 `internal/` 或 `cmd/` 重建一套目录。
+- 路由注册集中放在 `routes`，不要散落在控制器文件里。
 - 控制器按资源拆分，例如 `DomainController`、`SubdomainController`、`RecordController`、`TokenController`、`DnsProviderController`。
 - 请求结构体、响应结构体放在 `dto`，不要在控制器里临时拼大 map。
-- 中间件放在 `middlewares`，负责认证、恢复、请求日志和跨域，不要在每个控制器里重复写。
-- Beego 框架对象不要向业务层扩散，service 和 repository 应尽量保持普通 Go 代码，便于测试。
+- 中间件放在 `middleware`，负责认证、恢复、请求日志和跨域，不要在每个控制器里重复写。
+- Gin 框架对象不要向业务层扩散，service 和 repository 应尽量保持普通 Go 代码，便于测试。
 
 ## SQLite 与迁移
 
@@ -215,7 +215,7 @@ web/
 
 禁止出现以下做法：
 
-- 把后端业务都写在 `main.go` 或单个 controller 文件里。
+- 把后端业务都写在 `main.go`、`routes` 或单个 controller 文件里。
 - 把前端页面、API 请求、状态管理、校验和样式全部塞进一个 `.vue` 文件里。
 - 为了赶进度复制大段相似代码，不提取组件、函数或适配器。
 - 绕过 service，直接在 controller 中写复杂 SQL 和业务判断。
@@ -276,6 +276,7 @@ SQLite 初始化时必须显式启用或确认：
 Repository 层必须：
 
 - 为写操作设置明确事务边界。
+- 新增数据访问优先通过 GORM 完成；如因复杂 join、SQLite 特性或事务一致性需要 raw SQL，必须通过 GORM 管理的连接执行并说明原因。
 - 避免长事务中执行远端 DNS API、HTTP 请求或耗时任务。
 - 对唯一约束冲突返回稳定业务错误码。
 - 对数据库锁、超时、外键失败给出可诊断错误。

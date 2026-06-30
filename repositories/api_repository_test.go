@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -10,8 +9,6 @@ import (
 
 	"kldns/models"
 	"kldns/pkg/auth"
-
-	_ "modernc.org/sqlite"
 )
 
 func TestAPIRepositoryAuthenticatesBearerTokenAndUpdatesUsage(t *testing.T) {
@@ -390,22 +387,19 @@ func TestRecordRepositorySyncDomainRecordsUsesSystemUserAndSkipsExisting(t *test
 	}
 }
 
-func testMigratedDB(t *testing.T) *sql.DB {
+func testMigratedDB(t *testing.T) *Database {
 	t.Helper()
-	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "kldns.db"))
+	db, err := OpenSQLite(filepath.Join(t.TempDir(), "kldns.db"), 1000, false)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := ConfigureSQLite(db, 1000, false); err != nil {
-		t.Fatal(err)
-	}
-	if err := RunMigrations(db, "../migrations"); err != nil {
+	if err := RunMigrations(db.SQLDB(), "../migrations"); err != nil {
 		t.Fatal(err)
 	}
 	return db
 }
 
-func seedAPIUser(t *testing.T, db *sql.DB) {
+func seedAPIUser(t *testing.T, db *Database) {
 	t.Helper()
 	_, err := db.Exec(`INSERT INTO users(id, group_id, status, username, password_hash, sid, email, points)
 		VALUES (1, 100, 2, 'alice', 'hash', 'sid', 'alice@example.com', 100)`)

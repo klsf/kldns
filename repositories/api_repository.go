@@ -11,12 +11,12 @@ import (
 )
 
 type APIRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
 const lastUsedUpdateIntervalSeconds int64 = 300
 
-func NewAPIRepository(db *sql.DB) *APIRepository {
+func NewAPIRepository(db *Database) *APIRepository {
 	return &APIRepository{DB: db}
 }
 
@@ -156,7 +156,7 @@ func (r *APIRepository) AuthenticateToken(ctx context.Context, tokenHash string)
 	return result, nil
 }
 
-func touchLastUsedAt(ctx context.Context, db *sql.DB, table string, id int64) error {
+func touchLastUsedAt(ctx context.Context, db *Database, table string, id int64) error {
 	switch table {
 	case "sessions", "api_tokens":
 	default:

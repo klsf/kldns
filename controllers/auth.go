@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"kldns/app"
-	"kldns/middlewares"
+	"kldns/middleware"
 	"kldns/models"
 	"kldns/pkg/auth"
 	apperrors "kldns/pkg/errors"
@@ -27,7 +27,7 @@ func (c *AuthController) Register() {
 		Password       string `json:"password"`
 		TurnstileToken string `json:"turnstile_token"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
@@ -93,7 +93,7 @@ func (c *AuthController) login(adminOnly bool) {
 		Password       string `json:"password"`
 		TurnstileToken string `json:"turnstile_token"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}
@@ -153,14 +153,14 @@ func (c *AuthController) verifyTurnstile(token string, scene string) *apperrors.
 	if strings.TrimSpace(cfg.SiteKey) == "" || strings.TrimSpace(cfg.SecretKey) == "" {
 		return apperrors.New(apperrors.CodeInvalidArgument, "人机验证配置不完整")
 	}
-	if err := (turnstile.Client{}).Verify(c.Ctx.Request.Context(), cfg.SecretKey, token, c.Ctx.Input.IP()); err != nil {
+	if err := (turnstile.Client{}).Verify(c.Ctx.Request.Context(), cfg.SecretKey, token, c.Ctx.ClientIP()); err != nil {
 		return apperrors.Wrap(apperrors.CodeForbidden, "人机验证失败，请重试", err)
 	}
 	return nil
 }
 
 func (c *AuthController) Me() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -169,7 +169,7 @@ func (c *AuthController) Me() {
 }
 
 func (c *AuthController) ChangePassword() {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
@@ -178,7 +178,7 @@ func (c *AuthController) ChangePassword() {
 		OldPassword string `json:"old_password"`
 		NewPassword string `json:"new_password"`
 	}
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, &input); err != nil {
+	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return
 	}

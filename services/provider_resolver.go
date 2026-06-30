@@ -9,11 +9,11 @@ import (
 	"kldns/models"
 	"kldns/pkg/dns"
 	"kldns/pkg/secrets"
-
-	"github.com/beego/beego/v2/server/web"
 )
 
-type DBProviderResolver struct{}
+type DBProviderResolver struct {
+	SecretKey string
+}
 
 func (r DBProviderResolver) Resolve(ctx context.Context, domain models.Domain) (dns.Provider, error) {
 	provider, ok := dns.New(domain.ProviderKey)
@@ -24,11 +24,11 @@ func (r DBProviderResolver) Resolve(ctx context.Context, domain models.Domain) (
 	if rawConfig == "" {
 		return nil, fmt.Errorf("domain %s has no provider config", domain.Domain)
 	}
-	secret, err := web.AppConfig.String("secret_key")
-	if err != nil || secret == "" {
+	secret := strings.TrimSpace(r.SecretKey)
+	if secret == "" {
 		secret = "change-me-before-production-kldns-secret"
 	}
-	rawConfig, err = secrets.Decrypt(secret, rawConfig)
+	rawConfig, err := secrets.Decrypt(secret, rawConfig)
 	if err != nil {
 		return nil, fmt.Errorf("decrypt provider config: %w", err)
 	}

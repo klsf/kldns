@@ -10,10 +10,10 @@ import (
 
 // SubdomainsRepository handles subdomain data access.
 type SubdomainsRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewSubdomainsRepository(db *sql.DB) *SubdomainsRepository {
+func NewSubdomainsRepository(db *Database) *SubdomainsRepository {
 	return &SubdomainsRepository{DB: db}
 }
 

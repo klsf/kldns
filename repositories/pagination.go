@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 )
 
 const defaultPageSize = 20
@@ -42,7 +41,7 @@ func (q PageQuery) LimitOffset() (int, int) {
 	return q.PageSize, (q.Page - 1) * q.PageSize
 }
 
-func countRows(ctx context.Context, db *sql.DB, fromWhere string, args []any) (int64, error) {
+func countRows(ctx context.Context, db *Database, fromWhere string, args []any) (int64, error) {
 	var total int64
 	err := db.QueryRowContext(ctx, "SELECT COUNT(1) "+fromWhere, args...).Scan(&total)
 	return total, err

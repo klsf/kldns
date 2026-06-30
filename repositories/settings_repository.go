@@ -11,10 +11,10 @@ import (
 )
 
 type SettingsRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewSettingsRepository(db *sql.DB) *SettingsRepository {
+func NewSettingsRepository(db *Database) *SettingsRepository {
 	return &SettingsRepository{DB: db}
 }
 

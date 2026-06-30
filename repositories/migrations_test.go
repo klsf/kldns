@@ -5,8 +5,6 @@ import (
 	migrationassets "kldns/migrations"
 	"path/filepath"
 	"testing"
-
-	_ "modernc.org/sqlite"
 )
 
 func TestInitialMigrationEnablesConstraints(t *testing.T) {

@@ -11,10 +11,10 @@ import (
 )
 
 type RecordRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewRecordRepository(db *sql.DB) *RecordRepository {
+func NewRecordRepository(db *Database) *RecordRepository {
 	return &RecordRepository{DB: db}
 }
 
@@ -432,7 +432,7 @@ func (r *RecordRepository) DeleteAdminDomain(ctx context.Context, domain models.
 	})
 }
 
-func withTx(ctx context.Context, db *sql.DB, fn func(*sql.Tx) error) error {
+func withTx(ctx context.Context, db *Database, fn func(*sql.Tx) error) error {
 	tx, err := db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

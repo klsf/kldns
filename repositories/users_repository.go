@@ -2,16 +2,15 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 )
 
 // UsersRepository handles user admin data access.
 type UsersRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewUsersRepository(db *sql.DB) *UsersRepository {
+func NewUsersRepository(db *Database) *UsersRepository {
 	return &UsersRepository{DB: db}
 }
 

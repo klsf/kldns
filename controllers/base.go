@@ -1,32 +1,37 @@
 package controllers
 
 import (
+	"bytes"
 	"encoding/json"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
 
 	"kldns/dto"
-	"kldns/middlewares"
+	"kldns/middleware"
 	"kldns/models"
 	apperrors "kldns/pkg/errors"
 
-	"github.com/beego/beego/v2/server/web"
+	"github.com/gin-gonic/gin"
 )
 
 type APIController struct {
-	web.Controller
+	Ctx *gin.Context
+}
+
+const rawBodyKey = "kldns_raw_body"
+
+func (c *APIController) SetContext(ctx *gin.Context) {
+	c.Ctx = ctx
 }
 
 func (c *APIController) OK(data any) {
-	c.Data["json"] = dto.Response[any]{Code: string(apperrors.CodeOK), Message: "", Data: data}
-	_ = c.ServeJSON()
+	c.Ctx.JSON(http.StatusOK, dto.Response[any]{Code: string(apperrors.CodeOK), Message: "", Data: data})
 }
 
 func (c *APIController) Fail(status int, code apperrors.Code, message string) {
-	c.Ctx.Output.SetStatus(status)
-	c.Data["json"] = dto.Response[any]{Code: string(code), Message: message}
-	_ = c.ServeJSON()
+	c.Ctx.JSON(status, dto.Response[any]{Code: string(code), Message: message})
 }
 
 func (c *APIController) Internal(message string) {
@@ -34,11 +39,32 @@ func (c *APIController) Internal(message string) {
 }
 
 func (c *APIController) BindJSON(dst any) bool {
-	if err := json.Unmarshal(c.Ctx.Input.RequestBody, dst); err != nil {
+	if err := json.Unmarshal(c.RawBody(), dst); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
 		return false
 	}
 	return true
+}
+
+func (c *APIController) RawBody() []byte {
+	if c.Ctx == nil || c.Ctx.Request == nil {
+		return nil
+	}
+	if value, ok := c.Ctx.Get(rawBodyKey); ok {
+		if body, ok := value.([]byte); ok {
+			return body
+		}
+	}
+	if c.Ctx.Request.Body == nil {
+		return nil
+	}
+	body, err := io.ReadAll(c.Ctx.Request.Body)
+	if err != nil {
+		return nil
+	}
+	c.Ctx.Request.Body = io.NopCloser(bytes.NewBuffer(body))
+	c.Ctx.Set(rawBodyKey, body)
+	return body
 }
 
 func (c *APIController) FailApp(err *apperrors.AppError) {
@@ -49,7 +75,7 @@ func (c *APIController) FailApp(err *apperrors.AppError) {
 }
 
 func (c *APIController) CurrentUser() (models.User, bool) {
-	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	user, ok := middleware.UserFromContext(c.Ctx.Request.Context())
 	if !ok {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 	}
@@ -57,6 +83,15 @@ func (c *APIController) CurrentUser() (models.User, bool) {
 }
 
 func (c *APIController) PathInt64(key string) int64 {
-	value, _ := strconv.ParseInt(strings.TrimSpace(c.Ctx.Input.Param(key)), 10, 64)
+	key = strings.TrimPrefix(key, ":")
+	value, _ := strconv.ParseInt(strings.TrimSpace(c.Ctx.Param(key)), 10, 64)
+	return value
+}
+
+func (c *APIController) GetString(key string, defaults ...string) string {
+	value := c.Ctx.Query(key)
+	if value == "" && len(defaults) > 0 {
+		return defaults[0]
+	}
 	return value
 }

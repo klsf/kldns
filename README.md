@@ -2,19 +2,20 @@
 
 KLDNS is a DNS management system for second-level domain distribution. This refactor uses:
 
-- Backend: Go, Beego, SQLite3.
+- Backend: Go, Gin, GORM, SQLite3.
 - Frontend: Vite, Vue 3, TypeScript, Element Plus.
 - DNS providers: Cloudflare, DNSPod, Aliyun, DNS.com, DNSLA, DnsDun, West, HuaweiCloud, BaiduCloud, Route53, GoogleCloudDns.
 
 ## Layout
 
 ```text
-main.go                  # Beego startup and database/migration bootstrap
-conf/app.conf            # Runtime configuration
+main.go                  # Gin startup and database/migration bootstrap
+config/app.yaml          # Runtime configuration
+routes/                  # Gin route registration
 controllers/             # HTTP controllers
-middlewares/             # Bearer auth and admin guard
+middleware/              # Bearer auth and admin guard
 models/                  # Domain models
-repositories/            # SQLite access and migrations
+repositories/            # GORM-backed SQLite access and migrations
 services/                # Business rules and DNS write flow
 pkg/dns/                 # Provider interface and adapters
 migrations/              # SQLite migration scripts
@@ -23,27 +24,32 @@ web/                     # Vite + Vue 3 frontend
 
 ## Configuration
 
-Default config is in `conf/app.conf`.
+Default config is in `config/app.yaml`. Set `KLDNS_CONFIG` to load a different file.
 
-```ini
-appname = kldns
-httpport = 8080
-runmode = dev
-copyrequestbody = true
+```yaml
+app:
+  name: kldns
+  port: 8004
+  mode: dev
 
-db_path = data/kldns.db
-db_busy_timeout_ms = 5000
-db_wal = true
-secret_key = change-me-before-production-kldns-secret
+database:
+  path: data/kldns.db
+  busy_timeout_ms: 5000
+  wal: true
+
+security:
+  secret_key: change-me-before-production-kldns-secret
 ```
 
-Change `secret_key` before production. It is used for protected settings such as DNS provider credentials and Turnstile secrets. Do not commit database files, private keys, tokens, or provider secrets.
+Change `security.secret_key` before production. It is used for protected settings such as DNS provider credentials and Turnstile secrets. Do not commit database files, private keys, tokens, or provider secrets.
 
 SQLite startup explicitly enables:
 
 - `PRAGMA foreign_keys = ON`
-- `PRAGMA busy_timeout = <db_busy_timeout_ms>`
-- `PRAGMA journal_mode = WAL` when `db_wal = true`
+- `PRAGMA busy_timeout = <database.busy_timeout_ms>`
+- `PRAGMA journal_mode = WAL` when `database.wal = true`
+
+The runtime database handle is opened through GORM with a pure Go SQLite driver. Existing complex repository queries may keep raw SQL through the GORM-managed connection; new data access code should prefer GORM APIs unless raw SQL is clearer for joins, constraints, or transactional DNS consistency flows.
 
 ## Database Migrations
 
@@ -74,7 +80,7 @@ npm run build
 npm run dev
 ```
 
-The frontend dev server proxies are not configured in code; for integrated local use, run Beego on `/api/v1` and configure deployment or Vite proxy as needed.
+The frontend dev server proxies `/api` to the Gin server on `127.0.0.1:8004`.
 
 ## Packaging
 
@@ -87,7 +93,7 @@ cd ..
 go build -o kldns.exe .
 ```
 
-The resulting binary can be deployed without copying `migrations/` or `web/dist/`. Runtime configuration such as `conf/app.conf` and writable data such as `data/kldns.db` still remain external.
+The resulting binary can be deployed without copying `migrations/` or `web/dist/`. Runtime configuration such as `config/app.yaml` and writable data such as `data/kldns.db` still remain external.
 
 ## API Summary
 
@@ -95,7 +101,7 @@ All business APIs use `/api/v1`.
 
 Public:
 
-- `GET /health`
+- `GET /api/v1/health`
 - `POST /install/admin` (empty username/password defaults to `admin` / `123456` on a fresh database)
 - `POST /auth/register`
 - `POST /auth/login`
@@ -137,8 +143,8 @@ Responses use the common envelope:
 
 ```json
 {
-  "code": "ok",
-  "message": "ok",
+  "code": "OK",
+  "message": "",
   "data": {}
 }
 ```

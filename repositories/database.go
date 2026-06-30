@@ -1,45 +1,84 @@
 package repositories
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
 
-	"github.com/beego/beego/v2/server/web"
-	_ "modernc.org/sqlite"
+	"github.com/glebarez/sqlite"
+	"gorm.io/gorm"
 )
 
-func OpenFromConfig() (*sql.DB, error) {
-	path, err := web.AppConfig.String("db_path")
-	if err != nil || path == "" {
-		path = "data/kldns.db"
-	}
-	busyTimeout, err := web.AppConfig.Int("db_busy_timeout_ms")
-	if err != nil || busyTimeout <= 0 {
-		busyTimeout = 5000
-	}
-	wal, err := web.AppConfig.Bool("db_wal")
-	if err != nil {
-		wal = true
-	}
-	return OpenSQLite(path, busyTimeout, wal)
+type Database struct {
+	gorm *gorm.DB
+	sql  *sql.DB
 }
 
-func OpenSQLite(path string, busyTimeoutMS int, wal bool) (*sql.DB, error) {
+func OpenSQLite(path string, busyTimeoutMS int, wal bool) (*Database, error) {
 	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return nil, err
 	}
-	db, err := sql.Open("sqlite", path)
+	gormDB, err := gorm.Open(sqlite.Open(path), &gorm.Config{})
 	if err != nil {
 		return nil, err
 	}
-	db.SetMaxOpenConns(1)
-	if err := ConfigureSQLite(db, busyTimeoutMS, wal); err != nil {
-		_ = db.Close()
+	sqlDB, err := gormDB.DB()
+	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	sqlDB.SetMaxOpenConns(1)
+	if err := ConfigureSQLite(sqlDB, busyTimeoutMS, wal); err != nil {
+		_ = sqlDB.Close()
+		return nil, err
+	}
+	return &Database{gorm: gormDB, sql: sqlDB}, nil
+}
+
+func (db *Database) Gorm() *gorm.DB {
+	if db == nil {
+		return nil
+	}
+	return db.gorm
+}
+
+func (db *Database) SQLDB() *sql.DB {
+	if db == nil {
+		return nil
+	}
+	return db.sql
+}
+
+func (db *Database) Close() error {
+	if db == nil || db.sql == nil {
+		return nil
+	}
+	return db.sql.Close()
+}
+
+func (db *Database) Exec(query string, args ...any) (sql.Result, error) {
+	return db.sql.Exec(query, args...)
+}
+
+func (db *Database) QueryRow(query string, args ...any) *sql.Row {
+	return db.sql.QueryRow(query, args...)
+}
+
+func (db *Database) QueryContext(ctx context.Context, query string, args ...any) (*sql.Rows, error) {
+	return db.sql.QueryContext(ctx, query, args...)
+}
+
+func (db *Database) QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row {
+	return db.sql.QueryRowContext(ctx, query, args...)
+}
+
+func (db *Database) ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error) {
+	return db.sql.ExecContext(ctx, query, args...)
+}
+
+func (db *Database) BeginTx(ctx context.Context, opts *sql.TxOptions) (*sql.Tx, error) {
+	return db.sql.BeginTx(ctx, opts)
 }
 
 func ConfigureSQLite(db *sql.DB, busyTimeoutMS int, wal bool) error {

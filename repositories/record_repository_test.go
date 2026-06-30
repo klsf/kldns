@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"testing"
 )
 
@@ -65,7 +64,7 @@ func TestRecordRepositoryAllowsUnlimitedSubdomainRecordsSetting(t *testing.T) {
 	}
 }
 
-func seedRecordDomain(t *testing.T, db *sql.DB) {
+func seedRecordDomain(t *testing.T, db *Database) {
 	t.Helper()
 	if _, err := db.Exec(`INSERT INTO dns_providers(key, config_ciphertext) VALUES ('fake', '')`); err != nil {
 		t.Fatal(err)

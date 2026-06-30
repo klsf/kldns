@@ -10,10 +10,10 @@ import (
 
 // DomainsRepository handles domain admin data access.
 type DomainsRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewDomainsRepository(db *sql.DB) *DomainsRepository {
+func NewDomainsRepository(db *Database) *DomainsRepository {
 	return &DomainsRepository{DB: db}
 }
 

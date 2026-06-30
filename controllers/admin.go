@@ -14,8 +14,6 @@ import (
 	"kldns/pkg/validation"
 	"kldns/repositories"
 	"kldns/services"
-
-	"github.com/beego/beego/v2/server/web"
 )
 
 type AdminListController struct {
@@ -86,7 +84,7 @@ func (c *AdminListController) SaveUser() {
 	var raw struct {
 		Password string `json:"password"`
 	}
-	_ = json.Unmarshal(c.Ctx.Input.RequestBody, &raw)
+	_ = json.Unmarshal(c.RawBody(), &raw)
 	if strings.TrimSpace(raw.Password) != "" {
 		if len(raw.Password) < 8 {
 			c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "密码至少 8 位")
@@ -233,14 +231,14 @@ func (c *AdminListController) DeleteDomain() {
 	var input struct {
 		DeleteMode string `json:"delete_mode"`
 	}
-	if len(c.Ctx.Input.RequestBody) > 0 {
+	if len(c.RawBody()) > 0 {
 		if !c.BindJSON(&input) {
 			return
 		}
 	}
 	service := services.AdminDeletionService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 	}
 	result, appErr := service.DeleteDomain(c.Ctx.Request.Context(), admin.ID, id, input.DeleteMode, "admin")
 	if appErr != nil {
@@ -258,7 +256,7 @@ func (c *AdminListController) SyncDomainRecords() {
 	id := c.PathInt64(":id")
 	service := services.AdminDomainSyncService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 	}
 	result, appErr := service.SyncRecords(c.Ctx.Request.Context(), admin.ID, id)
 	if appErr != nil {
@@ -448,7 +446,7 @@ func (c *AdminListController) DeleteSubdomain() {
 	id := c.PathInt64(":id")
 	service := services.AdminDeletionService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 	}
 	result, appErr := service.DeleteSubdomain(c.Ctx.Request.Context(), admin.ID, id, "admin")
 	if appErr != nil {
@@ -472,7 +470,7 @@ func (c *AdminListController) DeleteUser() {
 	}
 	service := services.AdminDeletionService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 	}
 	result, appErr := service.DeleteUser(c.Ctx.Request.Context(), admin.ID, id, input.ConfirmUsername, "admin")
 	if appErr != nil {
@@ -501,7 +499,7 @@ func (c *AdminListController) SaveRecord() {
 	id := c.PathInt64(":id")
 	service := services.AdminRecordService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	var result services.SubmitRecordResult
@@ -530,7 +528,7 @@ func (c *AdminListController) DeleteRecord() {
 	id := c.PathInt64(":id")
 	service := services.AdminRecordService{
 		Repo:     repositories.NewRecordRepository(app.DB()),
-		Resolver: services.DBProviderResolver{},
+		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	result, appErr := service.Delete(c.Ctx.Request.Context(), admin.ID, id, "admin")
@@ -583,11 +581,7 @@ func (c *AdminListController) respondList(items any, err error, message string) 
 }
 
 func appSecret() string {
-	secret, err := web.AppConfig.String("secret_key")
-	if err != nil || secret == "" {
-		return "change-me-before-production-kldns-secret"
-	}
-	return secret
+	return app.SecretKey()
 }
 
 func queryInt64(c interface {

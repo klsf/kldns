@@ -2,7 +2,6 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 	"strings"
 
 	"kldns/pkg/dns"
@@ -11,14 +10,14 @@ import (
 // AdminRepository is a facade that aggregates domain-specific repositories.
 // Prefer using the individual repositories directly in new code.
 type AdminRepository struct {
-	DB      *sql.DB
+	DB      *Database
 	users   *UsersRepository
 	domains *DomainsRepository
 	groups  *GroupsRepository
 	logs    *LogsRepository
 }
 
-func NewAdminRepository(db *sql.DB) *AdminRepository {
+func NewAdminRepository(db *Database) *AdminRepository {
 	return &AdminRepository{
 		DB:      db,
 		users:   NewUsersRepository(db),

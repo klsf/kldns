@@ -2,15 +2,14 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 )
 
 // GroupsRepository handles user group data access.
 type GroupsRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewGroupsRepository(db *sql.DB) *GroupsRepository {
+func NewGroupsRepository(db *Database) *GroupsRepository {
 	return &GroupsRepository{DB: db}
 }
 

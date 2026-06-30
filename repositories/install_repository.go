@@ -2,14 +2,13 @@ package repositories
 
 import (
 	"context"
-	"database/sql"
 )
 
 type InstallRepository struct {
-	DB *sql.DB
+	DB *Database
 }
 
-func NewInstallRepository(db *sql.DB) *InstallRepository {
+func NewInstallRepository(db *Database) *InstallRepository {
 	return &InstallRepository{DB: db}
 }
 
