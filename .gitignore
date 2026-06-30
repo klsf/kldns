@@ -1,0 +1,12 @@
+data/
+.idea/
+*.db
+*.db-shm
+*.db-wal
+kldns
+kldns.exe
+web/node_modules/
+web/dist/
+web/tsconfig.tsbuildinfo
+.playwright-mcp/
+outputs/
