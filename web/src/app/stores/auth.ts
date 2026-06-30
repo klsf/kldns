@@ -38,6 +38,11 @@ export const useAuthStore = defineStore('auth', {
       localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
       return this.user
     },
+    updatePoints(points: number) {
+      if (!this.user) return
+      this.user = { ...this.user, points }
+      localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(this.user))
+    },
     logout() {
       this.token = ''
       this.user = null

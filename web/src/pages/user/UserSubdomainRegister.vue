@@ -113,7 +113,7 @@ const form = reactive({ did: 0, name: '' })
 const selectedDomain = computed(() => domains.value.find((domain) => domain.id === form.did))
 const selectedCost = computed(() => selectedDomain.value?.registration_cost ?? selectedDomain.value?.points_cost ?? 0)
 const previewDomain = computed(() => {
-  const prefix = form.name.trim() || 'dd'
+  const prefix = form.name.trim() || 'test'
   return selectedDomain.value ? `${prefix}.${selectedDomain.value.domain}` : `${prefix}.example.com`
 })
 const pagedDomains = computed(() => domains.value.slice((page.value - 1) * pageSize.value, page.value * pageSize.value))

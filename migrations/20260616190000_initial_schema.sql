@@ -40,11 +40,11 @@ CREATE TABLE dns_providers (
 CREATE TABLE domains (
   id INTEGER PRIMARY KEY,
   provider_key TEXT NOT NULL REFERENCES dns_providers(key) ON UPDATE CASCADE ON DELETE RESTRICT,
+  provider_config_ciphertext TEXT,
   remote_zone_id TEXT NOT NULL,
   domain TEXT NOT NULL,
   group_policy TEXT NOT NULL DEFAULT '0',
   record_types TEXT NOT NULL DEFAULT 'A,CNAME',
-  review_mode INTEGER NOT NULL DEFAULT 0 CHECK (review_mode IN (0, 1)),
   beian INTEGER NOT NULL DEFAULT 0 CHECK (beian IN (0, 1)),
   points_cost INTEGER NOT NULL DEFAULT 0 CHECK (points_cost >= 0),
   description TEXT,
@@ -55,44 +55,42 @@ CREATE TABLE domains (
 );
 CREATE INDEX idx_domains_provider_key ON domains(provider_key);
 
+CREATE TABLE subdomains (
+  id INTEGER PRIMARY KEY,
+  uid INTEGER NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  did INTEGER NOT NULL REFERENCES domains(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  full_domain TEXT NOT NULL,
+  status INTEGER NOT NULL DEFAULT 1 CHECK (status IN (0, 1)),
+  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
+  UNIQUE(did, name)
+);
+CREATE INDEX idx_subdomains_uid ON subdomains(uid);
+CREATE INDEX idx_subdomains_did ON subdomains(did);
+CREATE INDEX idx_subdomains_status ON subdomains(status);
+
 CREATE TABLE records (
   id INTEGER PRIMARY KEY,
   uid INTEGER NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
   did INTEGER NOT NULL REFERENCES domains(id) ON UPDATE CASCADE ON DELETE CASCADE,
+  subdomain_id INTEGER REFERENCES subdomains(id) ON UPDATE CASCADE ON DELETE SET NULL,
   record_id TEXT NOT NULL,
   name TEXT NOT NULL,
   type TEXT NOT NULL,
   value TEXT NOT NULL,
   line_id TEXT NOT NULL DEFAULT '0',
   line TEXT,
-  checked_at INTEGER NOT NULL DEFAULT 0,
   created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
   updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-  UNIQUE(did, name)
+  UNIQUE(did, name, type)
 );
 CREATE INDEX idx_records_uid ON records(uid);
 CREATE INDEX idx_records_record_id ON records(record_id);
 CREATE INDEX idx_records_did_type ON records(did, type);
-CREATE INDEX idx_records_checked_at ON records(checked_at);
-
-CREATE TABLE record_reviews (
-  id INTEGER PRIMARY KEY,
-  uid INTEGER NOT NULL REFERENCES users(id) ON UPDATE CASCADE ON DELETE CASCADE,
-  did INTEGER NOT NULL REFERENCES domains(id) ON UPDATE CASCADE ON DELETE CASCADE,
-  record_local_id INTEGER REFERENCES records(id) ON UPDATE CASCADE ON DELETE SET NULL,
-  action TEXT NOT NULL CHECK (action IN ('create', 'update', 'delete')),
-  payload TEXT NOT NULL,
-  status INTEGER NOT NULL DEFAULT 0 CHECK (status IN (0, 1, 2)),
-  review_remark TEXT,
-  reviewed_by INTEGER REFERENCES users(id) ON UPDATE CASCADE ON DELETE SET NULL,
-  reviewed_at INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL DEFAULT (strftime('%s','now')),
-  updated_at INTEGER NOT NULL DEFAULT (strftime('%s','now'))
-);
-CREATE INDEX idx_record_reviews_uid ON record_reviews(uid);
-CREATE INDEX idx_record_reviews_did ON record_reviews(did);
-CREATE INDEX idx_record_reviews_record_local_id ON record_reviews(record_local_id);
-CREATE INDEX idx_record_reviews_status ON record_reviews(status);
+CREATE INDEX idx_records_subdomain_id ON records(subdomain_id);
+CREATE INDEX idx_records_did_name_type ON records(did, name, type);
+CREATE INDEX idx_records_did_record_id ON records(did, record_id);
 
 CREATE TABLE api_tokens (
   id INTEGER PRIMARY KEY,
@@ -149,6 +147,7 @@ CREATE INDEX idx_operation_logs_uid ON operation_logs(uid);
 CREATE INDEX idx_operation_logs_admin_uid ON operation_logs(admin_uid);
 CREATE INDEX idx_operation_logs_source ON operation_logs(source);
 CREATE INDEX idx_operation_logs_action ON operation_logs(action);
+CREATE INDEX idx_operation_logs_created_at ON operation_logs(created_at DESC);
 
 CREATE TABLE dns_write_jobs (
   id INTEGER PRIMARY KEY,
@@ -172,9 +171,15 @@ CREATE INDEX idx_dns_write_jobs_status ON dns_write_jobs(status);
 CREATE INDEX idx_dns_write_jobs_provider ON dns_write_jobs(provider_key);
 
 INSERT INTO "groups"(id, name) VALUES (99, '管理组'), (100, '默认组');
+
+INSERT INTO users(id, group_id, status, username, password_hash, sid, email, points)
+VALUES (0, 100, 0, 'system-sync', 'system-disabled', 'system-sync', NULL, 0);
+
 INSERT INTO settings(key, value) VALUES
   ('array_user', '{"reg":"1","email":"1","point":"100"}'),
   ('array_web', '{"name":"KLDNS","title":"KLDNS - 二级域名分发与解析管理平台","keywords":"KLDNS,二级域名分发,DNS解析,域名管理平台","description":"KLDNS 用于二级域名分发、DNS 解析管理、用户自助申请与后台统一运维。"}'),
+  ('array_dns', '{"unlimited_subdomain_records":"1"}'),
+  ('array_turnstile', '{"site_key":"","register_enabled":"0","login_enabled":"0"}'),
   ('html_header', '<div class="alert alert-primary">本站提供二级域名分发与解析服务，请遵守相关法律法规与平台使用规范。</div>'),
   ('html_home', '欢迎使用 KLDNS 用户控制台。添加解析前请确认主机记录、记录类型与记录值填写正确，并遵守平台解析规范。'),
   ('index_urls', '源码下载|https://github.com/klsf/kldns'),
@@ -186,8 +191,8 @@ DROP TABLE IF EXISTS operation_logs;
 DROP TABLE IF EXISTS point_records;
 DROP TABLE IF EXISTS api_tokens;
 DROP TABLE IF EXISTS sessions;
-DROP TABLE IF EXISTS record_reviews;
 DROP TABLE IF EXISTS records;
+DROP TABLE IF EXISTS subdomains;
 DROP TABLE IF EXISTS domains;
 DROP TABLE IF EXISTS dns_providers;
 DROP TABLE IF EXISTS users;

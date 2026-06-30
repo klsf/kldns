@@ -9,11 +9,11 @@
     </header>
 
     <div class="resource-card">
-      <div class="toolbar-row">
+      <div class="toolbar-row record-filter-row">
         <el-select v-model="filters.subdomain_id" clearable placeholder="二级域名" class="toolbar-control" @change="loadRecords">
           <el-option v-for="item in subdomains" :key="item.id" :label="item.full_domain" :value="item.id" />
         </el-select>
-        <el-select v-model="filters.type" clearable placeholder="类型" class="toolbar-control" @change="loadRecords">
+        <el-select v-model="filters.type" clearable placeholder="类型" class="toolbar-control type-filter" @change="loadRecords">
           <el-option v-for="type in recordTypes" :key="type" :label="type" :value="type">
             <div class="record-type-option">
               <strong>{{ type }}</strong>
@@ -256,6 +256,32 @@ function fullName(record: RecordItem) {
 <style scoped>
 .wide-search {
   flex: 1 1 260px;
+}
+
+@media (min-width: 981px) {
+  .record-filter-row {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .record-filter-row .toolbar-control {
+    width: 190px;
+    flex: 0 0 190px;
+  }
+
+  .record-filter-row .type-filter {
+    width: 116px;
+    flex-basis: 116px;
+  }
+
+  .record-filter-row .wide-search {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .record-filter-row .el-button {
+    flex: 0 0 auto;
+  }
 }
 
 .field-help {

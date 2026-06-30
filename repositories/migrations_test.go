@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"database/sql"
+	migrationassets "kldns/migrations"
 	"path/filepath"
 	"testing"
 
@@ -48,5 +49,27 @@ func TestInitialMigrationEnablesConstraints(t *testing.T) {
 	if _, err := db.Exec(`INSERT INTO records(uid, did, record_id, name, type, value, line_id, line)
 		VALUES (0, 1, 'remote-1', 'www', 'A', '1.1.1.1', '0', '默认')`); err != nil {
 		t.Fatalf("system user should own synced records: %v", err)
+	}
+}
+
+func TestEmbeddedMigrationsInitializeSchema(t *testing.T) {
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "kldns.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := ConfigureSQLite(db, 1000, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := RunMigrationsFS(db, migrationassets.FS, migrationassets.Dir); err != nil {
+		t.Fatal(err)
+	}
+
+	var count int
+	if err := db.QueryRow("SELECT COUNT(1) FROM schema_migrations").Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count == 0 {
+		t.Fatal("embedded migrations did not apply")
 	}
 }

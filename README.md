@@ -47,19 +47,11 @@ SQLite startup explicitly enables:
 
 ## Database Migrations
 
-Migrations run automatically from `migrations/` during `main.go` startup and are tracked in `schema_migrations`.
+Migrations run automatically from the embedded `migrations/` files during `main.go` startup and are tracked in `schema_migrations`.
 
 Current migrations:
 
-- `20260616190000_initial_schema.sql`
-- `20260616200000_mail_settings.sql`
-- `20260616201000_email_verifications.sql`
-- `20260617090000_domain_provider_config.sql`
-- `20260617181000_remove_auto_check.sql`
-- `20260617183000_split_sessions_from_api_tokens.sql`
-- `20260617214500_system_user_for_synced_records.sql`
-- `20260617223000_subdomain_registration_no_reviews.sql`
-- `20260621110000_remove_mail_add_turnstile.sql`
+- `20260616190000_initial_schema.sql` initializes the current schema for fresh databases.
 
 Any schema change must add a new timestamped migration file. Do not rely on model-only changes.
 
@@ -83,6 +75,19 @@ npm run dev
 ```
 
 The frontend dev server proxies are not configured in code; for integrated local use, run Beego on `/api/v1` and configure deployment or Vite proxy as needed.
+
+## Packaging
+
+The production binary embeds both SQLite migrations and the built frontend. Build the frontend first, then compile Go:
+
+```powershell
+cd web
+npm run build
+cd ..
+go build -o kldns.exe .
+```
+
+The resulting binary can be deployed without copying `migrations/` or `web/dist/`. Runtime configuration such as `conf/app.conf` and writable data such as `data/kldns.db` still remain external.
 
 ## API Summary
 

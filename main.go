@@ -5,9 +5,12 @@ import (
 	"strings"
 
 	"kldns/app"
+	"kldns/controllers"
+	migrationassets "kldns/migrations"
 	_ "kldns/pkg/dns/providers"
 	"kldns/repositories"
 	_ "kldns/routers"
+	webassets "kldns/web"
 
 	"github.com/beego/beego/v2/server/web"
 )
@@ -23,10 +26,13 @@ func main() {
 	}
 	defer db.Close()
 
-	if err := repositories.RunMigrations(db, "migrations"); err != nil {
+	if err := repositories.RunMigrationsFS(db, migrationassets.FS, migrationassets.Dir); err != nil {
 		log.Fatalf("run migrations: %v", err)
 	}
 	app.SetDB(db)
+	if err := controllers.SetFrontendFS(webassets.FS, webassets.DistDir); err != nil {
+		log.Fatalf("load embedded frontend: %v", err)
+	}
 
 	web.Run()
 }

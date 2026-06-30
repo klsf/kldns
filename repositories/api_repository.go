@@ -85,6 +85,22 @@ type TokenSummary struct {
 	CreatedAt  int64  `json:"created_at"`
 }
 
+type PointRecordSummary struct {
+	ID        int64  `json:"id"`
+	Action    string `json:"action"`
+	Points    int64  `json:"points"`
+	Rest      int64  `json:"rest"`
+	Remark    string `json:"remark"`
+	CreatedAt int64  `json:"created_at"`
+}
+
+type PointsOverview struct {
+	Balance       int64                `json:"balance"`
+	MonthSpent    int64                `json:"month_spent"`
+	TotalSpent    int64                `json:"total_spent"`
+	RecentRecords []PointRecordSummary `json:"recent_records"`
+}
+
 type DomainFilter struct {
 	Keyword string
 }
@@ -313,6 +329,40 @@ func (r *APIRepository) ListTokens(ctx context.Context, uid int64) ([]TokenSumma
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+func (r *APIRepository) PointsOverview(ctx context.Context, uid int64) (PointsOverview, error) {
+	var result PointsOverview
+	if err := r.DB.QueryRowContext(ctx, `SELECT points FROM users WHERE id = ?`, uid).Scan(&result.Balance); err != nil {
+		return PointsOverview{}, err
+	}
+	monthStart := time.Now().In(time.Local)
+	monthStart = time.Date(monthStart.Year(), monthStart.Month(), 1, 0, 0, 0, 0, monthStart.Location())
+	if err := r.DB.QueryRowContext(ctx, `SELECT
+			COALESCE(SUM(CASE WHEN points < 0 THEN -points ELSE 0 END), 0),
+			COALESCE(SUM(CASE WHEN points < 0 AND created_at >= ? THEN -points ELSE 0 END), 0)
+		FROM point_records
+		WHERE uid = ?`, monthStart.Unix(), uid).Scan(&result.TotalSpent, &result.MonthSpent); err != nil {
+		return PointsOverview{}, err
+	}
+	rows, err := r.DB.QueryContext(ctx, `SELECT id, action, points, rest, COALESCE(remark, ''), created_at
+		FROM point_records
+		WHERE uid = ?
+		ORDER BY id DESC
+		LIMIT 100`, uid)
+	if err != nil {
+		return PointsOverview{}, err
+	}
+	defer rows.Close()
+	result.RecentRecords = []PointRecordSummary{}
+	for rows.Next() {
+		var item PointRecordSummary
+		if err := rows.Scan(&item.ID, &item.Action, &item.Points, &item.Rest, &item.Remark, &item.CreatedAt); err != nil {
+			return PointsOverview{}, err
+		}
+		result.RecentRecords = append(result.RecentRecords, item)
+	}
+	return result, rows.Err()
 }
 
 func (r *APIRepository) CreateToken(ctx context.Context, uid int64, name string, tokenHash string, tokenHint string, expiresAt int64) (int64, error) {

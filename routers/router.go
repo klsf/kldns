@@ -9,9 +9,9 @@ import (
 )
 
 func init() {
-	web.SetStaticPath("/assets", "web/dist/assets")
 	web.Router("/", &controllers.SPAController{}, "get:Index")
 	web.Router("/favicon.svg", &controllers.SPAController{}, "get:Favicon")
+	web.Router("/assets/*", &controllers.SPAController{}, "get:Asset")
 
 	web.Router("/api/v1/health", &controllers.HealthController{}, "get:Get")
 	web.Router("/api/v1/install/admin", &controllers.InstallController{}, "post:CreateAdmin")
@@ -27,6 +27,7 @@ func init() {
 	web.InsertFilter("/api/v1/subdomains/*", web.BeforeRouter, middlewares.APIBearerAuth)
 	web.InsertFilter("/api/v1/records", web.BeforeRouter, middlewares.APIBearerAuth)
 	web.InsertFilter("/api/v1/records/*", web.BeforeRouter, middlewares.APIBearerAuth)
+	web.InsertFilter("/api/v1/points", web.BeforeRouter, middlewares.APIBearerAuth)
 	web.InsertFilter("/api/v1/tokens", web.BeforeRouter, middlewares.APIBearerAuth)
 	web.InsertFilter("/api/v1/tokens/*", web.BeforeRouter, middlewares.APIBearerAuth)
 	web.InsertFilter("/api/v1/admin/*", web.BeforeRouter, middlewares.APIBearerAuth)
@@ -41,6 +42,7 @@ func init() {
 	web.Router("/api/v1/auth/password", &controllers.AuthController{}, "put:ChangePassword")
 	web.Router("/api/v1/records", &controllers.RecordAPIController{}, "get:Get;post:Post")
 	web.Router("/api/v1/records/:id", &controllers.RecordAPIController{}, "put:Put;delete:Delete")
+	web.Router("/api/v1/points", &controllers.PointsAPIController{}, "get:Get")
 	web.Router("/api/v1/tokens", &controllers.TokenAPIController{}, "get:Get;post:Post")
 	web.Router("/api/v1/tokens/:id", &controllers.TokenAPIController{}, "delete:Delete")
 	web.Router("/api/v1/admin/users", &controllers.AdminListController{}, "get:Users")

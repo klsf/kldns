@@ -5,36 +5,53 @@
       <strong>KLDNS</strong>
     </RouterLink>
     <section class="auth-panel">
-      <div class="auth-heading">
-        <h1>注册账号</h1>
-        <span>提交后按系统审核策略启用账号。</span>
-      </div>
-      <el-form label-position="top" @submit.prevent="submit">
-        <el-form-item label="用户名">
-          <el-input v-model="form.username" autocomplete="username" />
-        </el-form-item>
-        <el-form-item label="邮箱">
-          <el-input v-model="form.email" autocomplete="email" placeholder="可选，后续可用于绑定邮箱" />
-        </el-form-item>
-        <el-form-item label="密码">
-          <el-input v-model="form.password" type="password" autocomplete="new-password" show-password @keyup.enter="submit" />
-        </el-form-item>
-        <TurnstileWidget
-          v-model:token="turnstileToken"
-          :enabled="turnstile.register_enabled"
-          :site-key="turnstile.site_key"
-          :reset-key="turnstileResetKey"
-        />
-        <el-alert v-if="turnstileError" class="auth-alert" type="warning" show-icon :closable="false" :title="turnstileError" />
-        <el-button type="primary" class="wide-button" :loading="loading" @click="submit">注册</el-button>
-        <div class="auth-links">
-          <RouterLink to="/">返回首页</RouterLink>
-          <RouterLink to="/login">已有账号登录</RouterLink>
+      <div class="auth-form-panel">
+        <div class="auth-heading">
+          <h1>注册账号</h1>
+          <span>提交后按系统审核策略启用账号。</span>
         </div>
-      </el-form>
-      <aside class="auth-signal">
-        <b>自助申请解析</b>
-        <span>主域策略、记录类型、积分消耗会在用户中心展示。</span>
+        <el-form label-position="top" @submit.prevent="submit">
+          <el-form-item label="用户名">
+            <el-input v-model="form.username" autocomplete="username" />
+          </el-form-item>
+          <el-form-item label="邮箱">
+            <el-input v-model="form.email" autocomplete="email" placeholder="可选，后续可用于绑定邮箱" />
+          </el-form-item>
+          <el-form-item label="密码">
+            <el-input v-model="form.password" type="password" autocomplete="new-password" show-password @keyup.enter="submit" />
+          </el-form-item>
+          <TurnstileWidget
+            v-model:token="turnstileToken"
+            :enabled="turnstile.register_enabled"
+            :site-key="turnstile.site_key"
+            :reset-key="turnstileResetKey"
+          />
+          <el-alert v-if="turnstileError" class="auth-alert" type="warning" show-icon :closable="false" :title="turnstileError" />
+          <el-button type="primary" class="wide-button" :loading="loading" @click="submit">注册</el-button>
+          <div class="auth-links">
+            <RouterLink to="/">返回首页</RouterLink>
+            <RouterLink to="/login">已有账号登录</RouterLink>
+          </div>
+        </el-form>
+      </div>
+      <aside class="auth-signal provider-signal">
+        <div class="provider-map" aria-hidden="true">
+          <span class="provider-hub" />
+          <i />
+          <i />
+          <i />
+          <i />
+        </div>
+        <div class="provider-grid">
+          <span><em>☁</em>Cloudflare<i /></span>
+          <span><em>D</em>DNSPod<i /></span>
+          <span><em>A</em>Aliyun<i /></span>
+          <span><em>aws</em>Route53<i /></span>
+        </div>
+        <div class="signal-copy">
+          <b>多平台 DNS 接入</b>
+          <span>Cloudflare / DNSPod / Aliyun / Route53</span>
+        </div>
       </aside>
     </section>
   </main>

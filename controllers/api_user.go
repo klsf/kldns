@@ -292,6 +292,24 @@ type TokenAPIController struct {
 	APIController
 }
 
+type PointsAPIController struct {
+	APIController
+}
+
+func (c *PointsAPIController) Get() {
+	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
+	if !ok {
+		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
+		return
+	}
+	overview, err := repositories.NewAPIRepository(app.DB()).PointsOverview(c.Ctx.Request.Context(), user.ID)
+	if err != nil {
+		c.Internal("获取积分明细失败")
+		return
+	}
+	c.OK(overview)
+}
+
 func (c *TokenAPIController) Get() {
 	user, ok := middlewares.UserFromContext(c.Ctx.Request.Context())
 	if !ok {

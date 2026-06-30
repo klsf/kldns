@@ -57,8 +57,6 @@
           <span>系统设置</span>
         </el-menu-item>
       </el-menu>
-      <RouterLink class="nav-action admin-return-link" to="/home/records" @click="closeMobileMenu"><Home :size="18" />用户中心</RouterLink>
-      <button class="nav-action" type="button" @click="logout"><LogOut :size="18" />退出登录</button>
     </aside>
     <div class="app-main">
       <header class="top-bar">
@@ -70,7 +68,24 @@
           <strong>DNS 分发平台管理后台</strong>
         </div>
         <div class="top-meta">
-          <span class="user-chip">{{ auth.user?.username || 'admin' }}</span>
+          <el-dropdown trigger="click" placement="bottom-end" @command="handleAccountCommand">
+            <button class="user-chip admin-account-trigger" type="button">
+              <span>{{ auth.user?.username || 'admin' }}</span>
+              <ChevronDown :size="15" />
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="home" class="admin-account-menu-item">
+                  <Home :size="16" />
+                  <span>用户中心</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" class="admin-account-menu-item">
+                  <LogOut :size="16" />
+                  <span>退出登录</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </header>
       <main class="content-pane">
@@ -81,7 +96,7 @@
 </template>
 
 <script setup lang="ts">
-import { Gauge, Globe2, Home, LogOut, Menu, ScrollText, Settings, UsersRound, X } from 'lucide-vue-next'
+import { ChevronDown, Gauge, Globe2, Home, LogOut, Menu, ScrollText, Settings, UsersRound, X } from 'lucide-vue-next'
 import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '../app/stores/auth'
@@ -114,6 +129,16 @@ function closeMobileMenu() {
   menuOpen.value = false
 }
 
+function handleAccountCommand(command: string | number | object) {
+  if (command === 'home') {
+    closeMobileMenu()
+    router.push('/home/records')
+  }
+  if (command === 'logout') {
+    logout()
+  }
+}
+
 function logout() {
   closeMobileMenu()
   auth.logout()
@@ -128,10 +153,12 @@ function logout() {
 }
 
 .admin-nav-menu {
+  --el-menu-item-font-size: inherit;
   flex: 1 1 auto;
   min-width: 0;
   border-right: 0;
   background: transparent;
+  font-size: inherit;
 }
 
 .admin-nav-menu :deep(.el-menu-item),
@@ -141,6 +168,7 @@ function logout() {
   padding: 0 14px !important;
   border-radius: 8px;
   color: var(--nav-text);
+  font-size: inherit;
   line-height: 42px;
   gap: 10px;
 }
@@ -151,8 +179,28 @@ function logout() {
   background: rgba(87, 232, 196, 0.12);
 }
 
-.admin-return-link {
-  text-decoration: none;
+.admin-account-trigger {
+  gap: 6px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.admin-account-trigger svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+.admin-account-trigger span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+:global(.admin-account-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .admin-nav-menu :deep(.el-menu-item.is-active) {
@@ -215,15 +263,10 @@ function logout() {
   }
 
   .admin-shell .side-nav a,
-  .admin-shell .admin-nav-menu,
-  .admin-shell .nav-action {
+  .admin-shell .admin-nav-menu {
     flex: initial;
     width: 100%;
     white-space: normal;
-  }
-
-  .admin-shell .nav-action {
-    margin-top: auto;
   }
 
   .admin-menu-mask {
@@ -267,6 +310,13 @@ function logout() {
     grid-column: 3;
     grid-row: 1;
     justify-content: flex-end;
+  }
+
+  .admin-shell .user-chip {
+    display: inline-flex;
+    min-height: 38px;
+    max-width: 132px;
+    padding: 0 10px;
   }
 
   .admin-shell .top-title {

@@ -6,8 +6,6 @@
         <strong>KLDNS</strong>
       </RouterLink>
       <div class="public-links">
-        <a href="#capabilities">平台功能</a>
-        <a href="#workflow">注册步骤</a>
         <RouterLink v-if="isLoggedIn" class="account-link" :to="accountLink">{{ username || '用户中心' }}</RouterLink>
         <template v-else>
           <RouterLink to="/login">登录</RouterLink>
@@ -358,14 +356,13 @@ defineProps<{
 
 @media (max-width: 880px) {
   .public-nav {
-    align-items: flex-start;
-    flex-direction: column;
+    align-items: center;
     padding: 16px 0;
   }
 
   .public-links {
-    width: 100%;
-    overflow-x: auto;
+    min-width: 0;
+    justify-content: flex-end;
   }
 
   .home-hero {
@@ -396,9 +393,44 @@ defineProps<{
 }
 
 @media (max-width: 520px) {
+  .public-nav {
+    width: min(100% - 24px, 1180px);
+    gap: 12px;
+  }
+
+  .public-brand {
+    min-width: 0;
+    gap: 8px;
+  }
+
+  .public-brand span {
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
+  }
+
+  .public-brand strong {
+    overflow: hidden;
+    font-size: 17px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .public-links {
+    flex: 0 0 auto;
+    gap: 6px;
+  }
+
   .public-links a {
     min-height: 34px;
     padding: 0 10px;
+    white-space: nowrap;
+  }
+
+  .public-links .account-link {
+    max-width: 132px;
+    overflow: hidden;
+    text-overflow: ellipsis;
   }
 
   .console-preview {

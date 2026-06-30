@@ -2,7 +2,7 @@
   <section class="page-stack password-page">
     <header class="page-header">
       <div>
-        <h1>账号安全</h1>
+        <h1>修改密码</h1>
         <p class="resource-note">修改当前会员账号的登录密码。</p>
       </div>
     </header>

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"kldns/models"
 	"kldns/pkg/auth"
@@ -169,6 +170,35 @@ func TestAPIRepositoryListsPublicDomainsExcludingAdminOnly(t *testing.T) {
 	}
 	if got["admin.example"] {
 		t.Fatalf("admin-only domain was public: %#v", items)
+	}
+}
+
+func TestAPIRepositoryPointsOverviewReturnsBalanceAndRecentRecords(t *testing.T) {
+	db := testMigratedDB(t)
+	defer db.Close()
+	seedAPIUser(t, db)
+	now := time.Now().Unix()
+	monthStart := time.Now()
+	monthStart = time.Date(monthStart.Year(), monthStart.Month(), 1, 0, 0, 0, 0, monthStart.Location())
+	lastMonth := monthStart.Add(-24 * time.Hour).Unix()
+	if _, err := db.Exec(`INSERT INTO point_records(uid, action, points, rest, remark, created_at) VALUES
+		(1, '消费', -20, 80, '注册二级域名[api.example.com]', ?),
+		(1, '充值', 200, 280, '管理员调整积分', ?),
+		(1, '消费', -30, 250, '注册二级域名[cdn.example.com]', ?)`, now, now, lastMonth); err != nil {
+		t.Fatal(err)
+	}
+	overview, err := NewAPIRepository(db).PointsOverview(context.Background(), 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if overview.Balance != 100 || overview.MonthSpent != 20 || overview.TotalSpent != 50 {
+		t.Fatalf("unexpected overview: %#v", overview)
+	}
+	if len(overview.RecentRecords) != 3 {
+		t.Fatalf("recent records = %d, want 3", len(overview.RecentRecords))
+	}
+	if overview.RecentRecords[0].Remark != "注册二级域名[cdn.example.com]" || overview.RecentRecords[2].Remark != "注册二级域名[api.example.com]" {
+		t.Fatalf("records not ordered by newest id first: %#v", overview.RecentRecords)
 	}
 }
 

@@ -12,10 +12,8 @@
       <RouterLink to="/home/register" @click="closeMobileMenu"><BadgePlus :size="18" />域名注册</RouterLink>
       <RouterLink to="/home/domains" @click="closeMobileMenu"><Globe2 :size="18" />域名列表</RouterLink>
       <RouterLink to="/home/records" @click="closeMobileMenu"><ListTree :size="18" />域名解析</RouterLink>
+      <RouterLink to="/home/points" @click="closeMobileMenu"><Coins :size="18" />积分中心</RouterLink>
       <RouterLink to="/home/tokens" @click="closeMobileMenu"><KeyRound :size="18" />开放 API</RouterLink>
-      <RouterLink to="/home/password" @click="closeMobileMenu"><ShieldCheck :size="18" />账号安全</RouterLink>
-      <RouterLink v-if="auth.isAdmin" to="/admin" @click="closeMobileMenu"><Gauge :size="18" />管理后台</RouterLink>
-      <button class="nav-action" type="button" @click="logout"><LogOut :size="18" />退出</button>
     </aside>
     <div class="app-main">
       <header class="top-bar">
@@ -28,10 +26,28 @@
         </div>
         <div class="top-meta">
           <span class="desktop-account-meta">积分 {{ auth.user?.points ?? 0 }}</span>
-          <span class="user-chip">
-            <span>{{ auth.user?.username || 'user' }}</span>
-            <small>积分 {{ auth.user?.points ?? 0 }}</small>
-          </span>
+          <el-dropdown trigger="click" placement="bottom-end" @command="handleAccountCommand">
+            <button class="user-chip account-trigger" type="button">
+              <span>{{ auth.user?.username || 'user' }}</span>
+              <ChevronDown :size="15" />
+            </button>
+            <template #dropdown>
+              <el-dropdown-menu>
+                <el-dropdown-item command="password" class="account-menu-item">
+                  <ShieldCheck :size="16" />
+                  <span>修改密码</span>
+                </el-dropdown-item>
+                <el-dropdown-item v-if="auth.isAdmin" command="admin" class="account-menu-item">
+                  <Gauge :size="16" />
+                  <span>管理后台</span>
+                </el-dropdown-item>
+                <el-dropdown-item command="logout" class="account-menu-item">
+                  <LogOut :size="16" />
+                  <span>退出登录</span>
+                </el-dropdown-item>
+              </el-dropdown-menu>
+            </template>
+          </el-dropdown>
         </div>
       </header>
       <main class="content-pane">
@@ -42,7 +58,7 @@
 </template>
 
 <script setup lang="ts">
-import { BadgePlus, Gauge, Globe2, KeyRound, ListTree, LogOut, Menu, ShieldCheck, X } from 'lucide-vue-next'
+import { BadgePlus, ChevronDown, Coins, Gauge, Globe2, KeyRound, ListTree, LogOut, Menu, ShieldCheck, X } from 'lucide-vue-next'
 import { ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '../app/stores/auth'
@@ -66,6 +82,20 @@ function closeMobileMenu() {
   menuOpen.value = false
 }
 
+function handleAccountCommand(command: string | number | object) {
+  if (command === 'password') {
+    closeMobileMenu()
+    router.push('/home/password')
+  }
+  if (command === 'admin') {
+    closeMobileMenu()
+    router.push('/admin')
+  }
+  if (command === 'logout') {
+    logout()
+  }
+}
+
 function logout() {
   closeMobileMenu()
   auth.logout()
@@ -81,6 +111,23 @@ function logout() {
 
 .user-shell .user-chip small {
   display: none;
+}
+
+.account-trigger {
+  gap: 6px;
+  border: 1px solid var(--line);
+  cursor: pointer;
+}
+
+.account-trigger svg {
+  flex: 0 0 auto;
+  color: var(--muted);
+}
+
+:global(.account-menu-item) {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 @media (max-width: 980px) {
@@ -113,15 +160,10 @@ function logout() {
     padding: 8px 10px 20px;
   }
 
-  .user-shell .side-nav a,
-  .user-shell .nav-action {
+  .user-shell .side-nav a {
     flex: initial;
     width: 100%;
     white-space: normal;
-  }
-
-  .user-shell .nav-action {
-    margin-top: auto;
   }
 
   .user-menu-mask {
@@ -168,19 +210,16 @@ function logout() {
   }
 
   .user-shell .user-chip {
-    display: grid;
-    gap: 2px;
-    justify-items: end;
+    display: inline-flex;
     min-height: 38px;
-    padding: 5px 10px;
-    line-height: 1.15;
+    max-width: 132px;
+    padding: 0 10px;
   }
 
-  .user-shell .user-chip small {
-    display: block;
-    color: var(--muted);
-    font-size: 11px;
-    font-weight: 700;
+  .user-shell .user-chip > span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .user-shell .top-title {

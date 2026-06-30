@@ -9,6 +9,7 @@ const HomePage = () => import('../../pages/public/HomePage.vue')
 const UserRecordList = () => import('../../pages/user/UserRecordList.vue')
 const UserSubdomainRegister = () => import('../../pages/user/UserSubdomainRegister.vue')
 const UserDomainList = () => import('../../pages/user/UserDomainList.vue')
+const UserPointsCenter = () => import('../../pages/user/UserPointsCenter.vue')
 const UserTokenList = () => import('../../pages/user/UserTokenList.vue')
 const UserPasswordPage = () => import('../../pages/user/UserPasswordPage.vue')
 const AdminDashboard = () => import('../../pages/admin/AdminDashboard.vue')
@@ -35,6 +36,7 @@ export const router = createRouter({
         { path: 'register', component: UserSubdomainRegister },
         { path: 'domains', component: UserDomainList },
         { path: 'records', component: UserRecordList },
+        { path: 'points', component: UserPointsCenter },
         { path: 'tokens', component: UserTokenList },
         { path: 'password', component: UserPasswordPage },
       ],
