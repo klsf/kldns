@@ -35,7 +35,9 @@ KLDNS 是面向二级域名分发场景的 DNS 管理系统，核心能力包括
 
 ```text
 main.go                  # Gin 程序入口，只负责启动和基础装配
-config/                  # YAML 配置文件和配置加载代码
+config.yaml              # 根目录运行配置文件
+config.example.yaml      # 示例配置文件
+config/                  # 配置加载代码，不放运行 YAML 配置
 controllers/             # Gin 控制器，只处理 HTTP 入参和响应
 models/                  # 数据模型和领域结构
 routes/                  # Gin 路由注册

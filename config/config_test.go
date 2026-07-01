@@ -8,7 +8,7 @@ import (
 
 func TestLoadFileReadsYAMLAndDefaults(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "app.yaml")
+	path := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(path, []byte("app:\n  port: 9000\nsecurity:\n  secret_key: test-secret\n"), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -30,7 +30,7 @@ func TestLoadFileReadsYAMLAndDefaults(t *testing.T) {
 
 func TestLoadFileRejectsEmptyConfig(t *testing.T) {
 	dir := t.TempDir()
-	path := filepath.Join(dir, "app.yaml")
+	path := filepath.Join(dir, "config.yaml")
 	if err := os.WriteFile(path, []byte(" \n"), 0o600); err != nil {
 		t.Fatal(err)
 	}

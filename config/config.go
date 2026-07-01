@@ -10,7 +10,7 @@ import (
 )
 
 const (
-	DefaultPath      = "config/app.yaml"
+	DefaultPath      = "config.yaml"
 	EnvPath          = "KLDNS_CONFIG"
 	DefaultSecretKey = "change-me-before-production-kldns-secret"
 )

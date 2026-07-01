@@ -10,7 +10,8 @@ KLDNS is a DNS management system for second-level domain distribution. This refa
 
 ```text
 main.go                  # Gin startup and database/migration bootstrap
-config/app.yaml          # Runtime configuration
+config.yaml              # Runtime configuration
+config.example.yaml      # Example runtime configuration
 routes/                  # Gin route registration
 controllers/             # HTTP controllers
 middleware/              # Bearer auth and admin guard
@@ -24,7 +25,7 @@ web/                     # Vite + Vue 3 frontend
 
 ## Configuration
 
-Default config is in `config/app.yaml`. Set `KLDNS_CONFIG` to load a different file.
+Default config is in `config.yaml` at the repository or deployment root. `config.example.yaml` provides a starter template. Set `KLDNS_CONFIG` to load a different file.
 
 ```yaml
 app:
@@ -93,7 +94,7 @@ cd ..
 go build -o kldns.exe .
 ```
 
-The resulting binary can be deployed without copying `migrations/` or `web/dist/`. Runtime configuration such as `config/app.yaml` and writable data such as `data/kldns.db` still remain external.
+The resulting binary can be deployed without copying `migrations/` or `web/dist/`. Runtime configuration such as `config.yaml` and writable data such as `data/kldns.db` still remain external.
 
 ## API Summary
 
