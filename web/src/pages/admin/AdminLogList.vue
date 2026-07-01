@@ -124,7 +124,14 @@ function operatorName(log: LogItem) {
 
 <style scoped>
 .wide-admin-search {
-  width: 320px;
+  flex: 0 0 240px;
+  width: 240px;
 }
 
+@media (max-width: 980px) {
+  .wide-admin-search {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+}
 </style>

@@ -18,6 +18,7 @@ const AdminRecordList = () => import('../../pages/admin/AdminRecordList.vue')
 const AdminSubdomainList = () => import('../../pages/admin/AdminSubdomainList.vue')
 const AdminUserList = () => import('../../pages/admin/AdminUserList.vue')
 const AdminGroupList = () => import('../../pages/admin/AdminGroupList.vue')
+const AdminPointList = () => import('../../pages/admin/AdminPointList.vue')
 const AdminLogList = () => import('../../pages/admin/AdminLogList.vue')
 const AdminSettings = () => import('../../pages/admin/AdminSettings.vue')
 
@@ -49,6 +50,7 @@ export const router = createRouter({
         { path: '', component: AdminDashboard },
         { path: 'users', component: AdminUserList },
         { path: 'groups', component: AdminGroupList },
+        { path: 'points', component: AdminPointList },
         { path: 'domains', component: AdminDomainList },
         { path: 'subdomains', component: AdminSubdomainList },
         { path: 'records', component: AdminRecordList },

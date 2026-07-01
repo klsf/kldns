@@ -26,6 +26,7 @@ export interface AdminDomain {
   record_types: string
   beian: number
   points_cost: number
+  require_review: number
   description: string
 }
 
@@ -36,6 +37,10 @@ export interface AdminSubdomain {
   name: string
   full_domain: string
   status: number
+  purpose: string
+  reject_reason: string
+  reviewed_by: number
+  reviewed_at: number
   username: string
   domain: string
   record_count: number
@@ -77,6 +82,19 @@ export interface LogItem {
   created_at: number
 }
 
+export interface AdminPointRecord {
+  id: number
+  uid: number
+  admin_uid: number
+  username: string
+  admin_username: string
+  action: string
+  points: number
+  rest: number
+  remark: string
+  created_at: number
+}
+
 export interface SettingItem {
   key: string
   value: string
@@ -92,6 +110,7 @@ export interface AdminDomainPayload {
   record_types: string[]
   beian: number
   points_cost: number
+  require_review: number
   description: string
 }
 
@@ -120,6 +139,7 @@ export interface AdminRecordQuery {
 
 export interface AdminSubdomainQuery {
   did?: number
+  status?: number
   keyword?: string
 }
 
@@ -127,6 +147,23 @@ export interface LogQuery {
   source?: string
   action?: string
   keyword?: string
+}
+
+export interface AdminPointQuery {
+  uid?: number
+  admin_uid?: number
+  action?: string
+  change?: 'increase' | 'decrease' | ''
+  keyword?: string
+}
+
+export interface AdminPointAdjustResult {
+  user_id: number
+  username: string
+  delta: number
+  balance: number
+  action: string
+  remark: string
 }
 
 export function listAdminUsers(params: AdminUserQuery = {}) {
@@ -144,7 +181,6 @@ export function saveAdminUser(
     email: string
     group_id: number
     status: number
-    points: number
     password?: string
   },
 ) {
@@ -153,6 +189,10 @@ export function saveAdminUser(
 
 export function deleteAdminUser(id: number, payload: { confirm_username: string }) {
   return http.delete<unknown, ApiEnvelope<{ deleted: boolean; records_deleted: number; subdomains_deleted: number }>>(`/admin/users/${id}`, { data: payload })
+}
+
+export function adjustAdminUserPoints(id: number, payload: { mode: 'increase' | 'decrease'; points: number; remark: string }) {
+  return http.post<unknown, ApiEnvelope<AdminPointAdjustResult>>(`/admin/users/${id}/points`, payload)
 }
 
 export function listAdminGroups(params: AdminGroupQuery = {}) {
@@ -218,6 +258,14 @@ export function deleteAdminSubdomain(id: number) {
   return http.delete<unknown, ApiEnvelope<{ deleted: boolean; records_deleted: number; subdomains_deleted: number }>>(`/admin/subdomains/${id}`)
 }
 
+export function approveAdminSubdomain(id: number) {
+  return http.post<unknown, ApiEnvelope<{ reviewed: boolean; action: string }>>(`/admin/subdomains/${id}/approve`)
+}
+
+export function rejectAdminSubdomain(id: number, payload: { reason: string }) {
+  return http.post<unknown, ApiEnvelope<{ reviewed: boolean; action: string; refund?: number }>>(`/admin/subdomains/${id}/reject`, payload)
+}
+
 export function saveAdminRecord(
   payload: {
     id?: number
@@ -245,6 +293,14 @@ export function listLogs(params: LogQuery = {}) {
 
 export function listLogsPage(params: LogQuery & PageQuery) {
   return http.get<unknown, ApiEnvelope<PageResult<LogItem>>>('/admin/logs', { params })
+}
+
+export function listAdminPoints(params: AdminPointQuery = {}) {
+  return http.get<unknown, ApiEnvelope<AdminPointRecord[]>>('/admin/points', { params })
+}
+
+export function listAdminPointsPage(params: AdminPointQuery & PageQuery) {
+  return http.get<unknown, ApiEnvelope<PageResult<AdminPointRecord>>>('/admin/points', { params })
 }
 
 export function listSettings() {

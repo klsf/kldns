@@ -428,6 +428,11 @@ func (c *AdminListController) Subdomains() {
 		DID:     queryInt64(c, "did"),
 		Keyword: strings.TrimSpace(c.GetString("keyword")),
 	}
+	if raw := strings.TrimSpace(c.GetString("status")); raw != "" {
+		if status, err := strconv.Atoi(raw); err == nil {
+			filter.Status = &status
+		}
+	}
 	repo := repositories.NewAdminRepository(app.DB())
 	if page, ok := pageQuery(c); ok {
 		items, err := repo.ListAllSubdomainsPage(c.Ctx.Request.Context(), filter, page)
@@ -436,6 +441,44 @@ func (c *AdminListController) Subdomains() {
 	}
 	items, err := repo.ListAllSubdomains(c.Ctx.Request.Context(), filter)
 	c.respondList(items, err, "获取二级域名失败")
+}
+
+func (c *AdminListController) ApproveSubdomain() {
+	admin, ok := c.CurrentUser()
+	if !ok {
+		return
+	}
+	service := services.AdminSubdomainReviewService{
+		Repo: repositories.NewRecordRepository(app.DB()),
+	}
+	result, appErr := service.Approve(c.Ctx.Request.Context(), admin.ID, c.PathInt64(":id"), "admin")
+	if appErr != nil {
+		c.FailApp(appErr)
+		return
+	}
+	c.OK(result)
+}
+
+func (c *AdminListController) RejectSubdomain() {
+	admin, ok := c.CurrentUser()
+	if !ok {
+		return
+	}
+	var input struct {
+		Reason string `json:"reason"`
+	}
+	if !c.BindJSON(&input) {
+		return
+	}
+	service := services.AdminSubdomainReviewService{
+		Repo: repositories.NewRecordRepository(app.DB()),
+	}
+	result, appErr := service.Reject(c.Ctx.Request.Context(), admin.ID, c.PathInt64(":id"), input.Reason, "admin")
+	if appErr != nil {
+		c.FailApp(appErr)
+		return
+	}
+	c.OK(result)
 }
 
 func (c *AdminListController) DeleteSubdomain() {
@@ -473,6 +516,51 @@ func (c *AdminListController) DeleteUser() {
 		Resolver: providerResolver(),
 	}
 	result, appErr := service.DeleteUser(c.Ctx.Request.Context(), admin.ID, id, input.ConfirmUsername, "admin")
+	if appErr != nil {
+		c.FailApp(appErr)
+		return
+	}
+	c.OK(result)
+}
+
+func (c *AdminListController) Points() {
+	filter := repositories.PointRecordAdminFilter{
+		UID:     queryInt64(c, "uid"),
+		AdminID: queryInt64(c, "admin_uid"),
+		Action:  strings.TrimSpace(c.GetString("action")),
+		Change:  strings.TrimSpace(c.GetString("change")),
+		Keyword: strings.TrimSpace(c.GetString("keyword")),
+	}
+	repo := repositories.NewPointsRepository(app.DB())
+	if page, ok := pageQuery(c); ok {
+		items, err := repo.ListAdminPointRecordsPage(c.Ctx.Request.Context(), filter, page)
+		c.respondList(items, err, "获取积分明细失败")
+		return
+	}
+	items, err := repo.ListAdminPointRecords(c.Ctx.Request.Context(), filter)
+	c.respondList(items, err, "获取积分明细失败")
+}
+
+func (c *AdminListController) AdjustUserPoints() {
+	admin, ok := c.CurrentUser()
+	if !ok {
+		return
+	}
+	var input struct {
+		Mode   string `json:"mode"`
+		Points int64  `json:"points"`
+		Remark string `json:"remark"`
+	}
+	if !c.BindJSON(&input) {
+		return
+	}
+	service := services.AdminPointsService{
+		Repo: repositories.NewPointsRepository(app.DB()),
+	}
+	result, appErr := service.AdjustUserPoints(c.Ctx.Request.Context(), services.AdjustUserPointsInput{
+		AdminID: admin.ID, UserID: c.PathInt64(":id"), Mode: input.Mode, Points: input.Points,
+		Remark: input.Remark, Source: "admin",
+	})
 	if appErr != nil {
 		c.FailApp(appErr)
 		return

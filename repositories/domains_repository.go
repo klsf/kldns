@@ -27,6 +27,7 @@ type DomainAdminSummary struct {
 	RecordTypes          string `json:"record_types"`
 	Beian                int    `json:"beian"`
 	PointsCost           int64  `json:"points_cost"`
+	RequireReview        int    `json:"require_review"`
 	Description          string `json:"description"`
 }
 
@@ -46,6 +47,7 @@ type DomainWrite struct {
 	RecordTypes              []string          `json:"record_types"`
 	Beian                    int               `json:"beian"`
 	PointsCost               int64             `json:"points_cost"`
+	RequireReview            int               `json:"require_review"`
 	Description              string            `json:"description"`
 }
 
@@ -86,7 +88,7 @@ func (r *DomainsRepository) ListDomainsPage(ctx context.Context, filter DomainAd
 			return PageResult[DomainAdminSummary]{}, err
 		}
 	}
-	query := `SELECT id, provider_key, COALESCE(provider_config_ciphertext, '') != '', remote_zone_id, domain, group_policy, record_types, beian, points_cost, COALESCE(description, '') ` + fromWhere
+	query := `SELECT id, provider_key, COALESCE(provider_config_ciphertext, '') != '', remote_zone_id, domain, group_policy, record_types, beian, points_cost, require_review, COALESCE(description, '') ` + fromWhere
 	query += ` ORDER BY id DESC`
 	if page.Enabled() {
 		page = page.Normalize()
@@ -100,7 +102,7 @@ func (r *DomainsRepository) ListDomainsPage(ctx context.Context, filter DomainAd
 	items := []DomainAdminSummary{}
 	for rows.Next() {
 		var item DomainAdminSummary
-		if err := rows.Scan(&item.ID, &item.ProviderKey, &item.ProviderConfigStored, &item.RemoteZoneID, &item.Domain, &item.GroupPolicy, &item.RecordTypes, &item.Beian, &item.PointsCost, &item.Description); err != nil {
+		if err := rows.Scan(&item.ID, &item.ProviderKey, &item.ProviderConfigStored, &item.RemoteZoneID, &item.Domain, &item.GroupPolicy, &item.RecordTypes, &item.Beian, &item.PointsCost, &item.RequireReview, &item.Description); err != nil {
 			return PageResult[DomainAdminSummary]{}, err
 		}
 		items = append(items, item)
@@ -165,18 +167,18 @@ func (r *DomainsRepository) UpsertDomain(ctx context.Context, input DomainWrite)
 	}
 	if input.ID > 0 {
 		_, err := tx.ExecContext(ctx, `UPDATE domains
-			SET provider_key = ?, provider_config_ciphertext = ?, remote_zone_id = ?, domain = ?, group_policy = ?, record_types = ?, beian = ?, points_cost = ?, description = ?, updated_at = strftime('%s','now')
+			SET provider_key = ?, provider_config_ciphertext = ?, remote_zone_id = ?, domain = ?, group_policy = ?, record_types = ?, beian = ?, points_cost = ?, require_review = ?, description = ?, updated_at = strftime('%s','now')
 			WHERE id = ?`,
-			input.ProviderKey, input.ProviderConfigCiphertext, input.RemoteZoneID, input.Domain, input.GroupPolicy, recordTypes, boolInt(input.Beian), maxInt64(input.PointsCost, 0), input.Description, input.ID)
+			input.ProviderKey, input.ProviderConfigCiphertext, input.RemoteZoneID, input.Domain, input.GroupPolicy, recordTypes, boolInt(input.Beian), maxInt64(input.PointsCost, 0), boolInt(input.RequireReview), input.Description, input.ID)
 		if err != nil {
 			_ = tx.Rollback()
 			return 0, err
 		}
 		return input.ID, tx.Commit()
 	}
-	res, err := tx.ExecContext(ctx, `INSERT INTO domains(provider_key, provider_config_ciphertext, remote_zone_id, domain, group_policy, record_types, beian, points_cost, description)
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		input.ProviderKey, input.ProviderConfigCiphertext, input.RemoteZoneID, input.Domain, input.GroupPolicy, recordTypes, boolInt(input.Beian), maxInt64(input.PointsCost, 0), input.Description)
+	res, err := tx.ExecContext(ctx, `INSERT INTO domains(provider_key, provider_config_ciphertext, remote_zone_id, domain, group_policy, record_types, beian, points_cost, require_review, description)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		input.ProviderKey, input.ProviderConfigCiphertext, input.RemoteZoneID, input.Domain, input.GroupPolicy, recordTypes, boolInt(input.Beian), maxInt64(input.PointsCost, 0), boolInt(input.RequireReview), input.Description)
 	if err != nil {
 		_ = tx.Rollback()
 		return 0, err

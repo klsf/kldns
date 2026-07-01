@@ -22,6 +22,10 @@ func (r *RecordRepository) GetSubdomainForUser(ctx context.Context, id int64, ui
 	return NewSubdomainsRepository(r.DB).GetSubdomainForUser(ctx, id, uid)
 }
 
+func (r *RecordRepository) GetUserSubdomain(ctx context.Context, id int64, uid int64) (models.Subdomain, models.Domain, error) {
+	return NewSubdomainsRepository(r.DB).GetUserSubdomain(ctx, id, uid)
+}
+
 func (r *RecordRepository) GetSubdomain(ctx context.Context, id int64) (models.Subdomain, models.Domain, error) {
 	return NewSubdomainsRepository(r.DB).GetSubdomain(ctx, id)
 }
@@ -34,8 +38,8 @@ func (r *RecordRepository) ListSubdomainsForDomain(ctx context.Context, did int6
 	return NewSubdomainsRepository(r.DB).ListSubdomainsForDomain(ctx, did)
 }
 
-func (r *RecordRepository) RegisterSubdomain(ctx context.Context, user models.User, domain models.Domain, name string, log models.OperationLog) (models.Subdomain, error) {
-	return NewSubdomainsRepository(r.DB).RegisterSubdomain(ctx, user, domain, name, log)
+func (r *RecordRepository) RegisterSubdomain(ctx context.Context, user models.User, domain models.Domain, name string, purpose string, requireReview bool, log models.OperationLog) (models.Subdomain, error) {
+	return NewSubdomainsRepository(r.DB).RegisterSubdomain(ctx, user, domain, name, purpose, requireReview, log)
 }
 
 func (r *RecordRepository) DeleteSubdomain(ctx context.Context, subdomain models.Subdomain, log models.OperationLog) error {
@@ -44,6 +48,18 @@ func (r *RecordRepository) DeleteSubdomain(ctx context.Context, subdomain models
 
 func (r *RecordRepository) DeleteAdminSubdomain(ctx context.Context, subdomain models.Subdomain, log models.OperationLog) error {
 	return NewSubdomainsRepository(r.DB).DeleteAdminSubdomain(ctx, subdomain, log)
+}
+
+func (r *RecordRepository) ApproveSubdomain(ctx context.Context, subdomain models.Subdomain, log models.OperationLog) error {
+	return NewSubdomainsRepository(r.DB).ApproveSubdomain(ctx, subdomain, log)
+}
+
+func (r *RecordRepository) CancelPendingSubdomain(ctx context.Context, subdomain models.Subdomain, domain models.Domain, pointRemark string, log models.OperationLog) error {
+	return NewSubdomainsRepository(r.DB).CancelPendingSubdomain(ctx, subdomain, domain, pointRemark, log)
+}
+
+func (r *RecordRepository) RejectPendingSubdomain(ctx context.Context, subdomain models.Subdomain, domain models.Domain, reason string, pointRemark string, log models.OperationLog) error {
+	return NewSubdomainsRepository(r.DB).RejectPendingSubdomain(ctx, subdomain, domain, reason, pointRemark, log)
 }
 
 func (r *RecordRepository) GetUser(ctx context.Context, id int64) (models.User, error) {
@@ -58,11 +74,11 @@ func (r *RecordRepository) GetDomainForGroup(ctx context.Context, did int64, gid
 		domain      models.Domain
 		recordTypes string
 	}
-	err := r.DB.QueryRowContext(ctx, `SELECT id, provider_key, COALESCE(provider_config_ciphertext, ''), remote_zone_id, domain, group_policy, record_types, beian, points_cost, COALESCE(description, '')
+	err := r.DB.QueryRowContext(ctx, `SELECT id, provider_key, COALESCE(provider_config_ciphertext, ''), remote_zone_id, domain, group_policy, record_types, beian, points_cost, require_review, COALESCE(description, '')
 		FROM domains
 		WHERE id = ? AND (group_policy = '0' OR instr(',' || group_policy || ',', ',' || ? || ',') > 0)`, did, gid).
 		Scan(&row.domain.ID, &row.domain.ProviderKey, &row.domain.ProviderConfigCiphertext, &row.domain.RemoteZoneID, &row.domain.Domain, &row.domain.GroupPolicy,
-			&row.recordTypes, &row.domain.Beian, &row.domain.PointsCost, &row.domain.Description)
+			&row.recordTypes, &row.domain.Beian, &row.domain.PointsCost, &row.domain.RequireReview, &row.domain.Description)
 	if err != nil {
 		return models.Domain{}, err
 	}
@@ -80,10 +96,10 @@ func (r *RecordRepository) GetDomain(ctx context.Context, did int64) (models.Dom
 		domain      models.Domain
 		recordTypes string
 	}
-	err := r.DB.QueryRowContext(ctx, `SELECT id, provider_key, COALESCE(provider_config_ciphertext, ''), remote_zone_id, domain, group_policy, record_types, beian, points_cost, COALESCE(description, '')
+	err := r.DB.QueryRowContext(ctx, `SELECT id, provider_key, COALESCE(provider_config_ciphertext, ''), remote_zone_id, domain, group_policy, record_types, beian, points_cost, require_review, COALESCE(description, '')
 		FROM domains WHERE id = ?`, did).
 		Scan(&row.domain.ID, &row.domain.ProviderKey, &row.domain.ProviderConfigCiphertext, &row.domain.RemoteZoneID, &row.domain.Domain, &row.domain.GroupPolicy,
-			&row.recordTypes, &row.domain.Beian, &row.domain.PointsCost, &row.domain.Description)
+			&row.recordTypes, &row.domain.Beian, &row.domain.PointsCost, &row.domain.RequireReview, &row.domain.Description)
 	if err != nil {
 		return models.Domain{}, err
 	}
@@ -354,7 +370,7 @@ func ensureSystemSubdomain(ctx context.Context, tx *sql.Tx, domain models.Domain
 		return 0, nil
 	}
 	var id int64
-	err := tx.QueryRowContext(ctx, `SELECT id FROM subdomains WHERE did = ? AND name = ?`, domain.ID, label).Scan(&id)
+	err := tx.QueryRowContext(ctx, `SELECT id FROM subdomains WHERE did = ? AND name = ? AND status != ?`, domain.ID, label, models.SubdomainStatusRejected).Scan(&id)
 	if err == nil {
 		return id, nil
 	}

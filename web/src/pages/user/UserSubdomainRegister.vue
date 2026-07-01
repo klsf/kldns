@@ -28,6 +28,11 @@
             <span class="cost-inline"><Coins :size="14" />{{ row.registration_cost ?? row.points_cost ?? 0 }}</span>
           </template>
         </el-table-column>
+        <el-table-column label="审核" width="110">
+          <template #default="{ row }">
+            <el-tag class="compact-tag" :type="row.require_review === 1 ? 'warning' : 'success'">{{ row.require_review === 1 ? '需审核' : '免审核' }}</el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="支持类型" min-width="220">
           <template #default="{ row }">
             <div class="type-tags">
@@ -74,6 +79,10 @@
           </el-input>
           <p class="field-help">支持小写字母、数字和连字符。注册后可在“域名解析”中添加 @、www 等记录。</p>
         </el-form-item>
+        <el-form-item v-if="requiresReview" label="域名用途">
+          <el-input v-model="form.purpose" type="textarea" :rows="4" maxlength="500" show-word-limit placeholder="请说明该二级域名的使用场景、站点内容或业务用途" />
+          <p class="field-help">该主域开启了注册审核，提交后需等待管理员审核。</p>
+        </el-form-item>
         <el-form-item label="注册预览">
           <div class="domain-preview-inline">
             <strong>{{ previewDomain }}</strong>
@@ -94,6 +103,7 @@
 <script setup lang="ts">
 import { apiErrorMessage } from '../../api/errors'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { BadgePlus, Check, Coins, Globe2 } from 'lucide-vue-next'
 import { useAuthStore } from '../../app/stores/auth'
@@ -102,15 +112,18 @@ import { registerSubdomain } from '../../api/subdomains'
 import type { Domain } from '../../types/domain'
 
 const auth = useAuthStore()
+const route = useRoute()
 const domains = ref<Domain[]>([])
 const keyword = ref('')
 const page = ref(1)
 const pageSize = ref(10)
 const saving = ref(false)
 const dialogVisible = ref(false)
-const form = reactive({ did: 0, name: '' })
+const queryApplied = ref(false)
+const form = reactive({ did: 0, name: '', purpose: '' })
 
 const selectedDomain = computed(() => domains.value.find((domain) => domain.id === form.did))
+const requiresReview = computed(() => selectedDomain.value?.require_review === 1)
 const selectedCost = computed(() => selectedDomain.value?.registration_cost ?? selectedDomain.value?.points_cost ?? 0)
 const previewDomain = computed(() => {
   const prefix = form.name.trim() || 'test'
@@ -127,12 +140,27 @@ async function load() {
   page.value = 1
   const response = await listDomains({ keyword: keyword.value.trim() || undefined })
   domains.value = response.data
+  applyQueryPrefill()
 }
 
 function openRegister(domain: Domain) {
   form.did = domain.id
   form.name = ''
+  form.purpose = ''
   dialogVisible.value = true
+}
+
+function applyQueryPrefill() {
+  if (queryApplied.value || keyword.value.trim()) return
+  const did = Number(route.query.did || 0)
+  if (!did) return
+  const domain = domains.value.find((item) => item.id === did)
+  if (!domain) return
+  form.did = domain.id
+  form.name = String(route.query.name || '').trim().toLowerCase()
+  form.purpose = String(route.query.purpose || '').trim()
+  dialogVisible.value = true
+  queryApplied.value = true
 }
 
 async function submit() {
@@ -141,10 +169,14 @@ async function submit() {
     ElMessage.warning('请选择主域并填写二级域名前缀')
     return
   }
+  if (requiresReview.value && !form.purpose.trim()) {
+    ElMessage.warning('请输入域名用途')
+    return
+  }
   saving.value = true
   try {
-    await registerSubdomain({ did: form.did, name })
-    ElMessage.success('域名注册成功')
+    const response = await registerSubdomain({ did: form.did, name, purpose: form.purpose.trim() || undefined })
+    ElMessage.success(response.data.status === 2 ? '申请已提交，请等待管理员审核' : '域名注册成功')
     await auth.loadMe()
     dialogVisible.value = false
     reset()
@@ -157,6 +189,7 @@ async function submit() {
 
 function reset() {
   form.name = ''
+  form.purpose = ''
 }
 
 </script>

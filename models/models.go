@@ -19,6 +19,7 @@ type Domain struct {
 	RecordTypes              []string `json:"record_types"`
 	Beian                    int      `json:"beian"`
 	PointsCost               int64    `json:"points_cost"`
+	RequireReview            int      `json:"require_review"`
 	Description              string   `json:"description"`
 }
 
@@ -36,19 +37,25 @@ type Record struct {
 }
 
 type Subdomain struct {
-	ID         int64  `json:"id"`
-	UID        int64  `json:"uid"`
-	DID        int64  `json:"did"`
-	Name       string `json:"name"`
-	FullDomain string `json:"full_domain"`
-	Status     int    `json:"status"`
-	CreatedAt  int64  `json:"created_at"`
-	UpdatedAt  int64  `json:"updated_at"`
+	ID           int64  `json:"id"`
+	UID          int64  `json:"uid"`
+	DID          int64  `json:"did"`
+	Name         string `json:"name"`
+	FullDomain   string `json:"full_domain"`
+	Status       int    `json:"status"`
+	Purpose      string `json:"purpose"`
+	RejectReason string `json:"reject_reason"`
+	ReviewedBy   int64  `json:"reviewed_by"`
+	ReviewedAt   int64  `json:"reviewed_at"`
+	CreatedAt    int64  `json:"created_at"`
+	UpdatedAt    int64  `json:"updated_at"`
 }
 
 const (
 	SubdomainStatusActive   = 1
 	SubdomainStatusDisabled = 0
+	SubdomainStatusPending  = 2
+	SubdomainStatusRejected = 3
 )
 
 type OperationLog struct {

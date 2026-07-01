@@ -151,7 +151,7 @@ onMounted(async () => {
   await loadDNSPolicy()
   await loadSubdomains()
   const queryID = Number(route.query.subdomain_id || 0)
-  if (queryID) filters.subdomain_id = queryID
+  if (queryID && subdomains.value.some((item) => item.id === queryID)) filters.subdomain_id = queryID
   await loadRecords()
 })
 
@@ -161,7 +161,7 @@ async function loadDNSPolicy() {
 }
 
 async function loadSubdomains() {
-  const response = await listSubdomains()
+  const response = await listSubdomains({ status: 1 })
   subdomains.value = response.data
 }
 

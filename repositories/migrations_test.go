@@ -71,3 +71,42 @@ func TestEmbeddedMigrationsInitializeSchema(t *testing.T) {
 		t.Fatal("embedded migrations did not apply")
 	}
 }
+
+func TestRejectedSubdomainHistoryDoesNotOccupyName(t *testing.T) {
+	db, err := sql.Open("sqlite", filepath.Join(t.TempDir(), "kldns.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := ConfigureSQLite(db, 1000, false); err != nil {
+		t.Fatal(err)
+	}
+	if err := RunMigrations(db, "../migrations"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO dns_providers(key, config_ciphertext) VALUES ('fake', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO domains(id, provider_key, remote_zone_id, domain, group_policy, record_types) VALUES (1, 'fake', 'z1', 'example.com', '0', 'A')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO users(id, group_id, status, username, password_hash, sid, points) VALUES (1, 100, 2, 'alice', 'hash', 'alice', 10)`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO subdomains(uid, did, name, full_domain, status, purpose, reject_reason)
+		VALUES (1, 1, 'demo', 'demo.example.com', 3, '个人博客', '用途不合规')`); err != nil {
+		t.Fatalf("insert rejected history: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO subdomains(uid, did, name, full_domain, status, purpose)
+		VALUES (1, 1, 'demo', 'demo.example.com', 2, '重新申请')`); err != nil {
+		t.Fatalf("rejected history should not block pending reapply: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO subdomains(uid, did, name, full_domain, status, purpose, reject_reason)
+		VALUES (1, 1, 'demo', 'demo.example.com', 3, '再次历史', '仍不合规')`); err != nil {
+		t.Fatalf("multiple rejected histories should be allowed: %v", err)
+	}
+	if _, err := db.Exec(`INSERT INTO subdomains(uid, did, name, full_domain, status)
+		VALUES (1, 1, 'demo', 'demo.example.com', 1)`); err == nil {
+		t.Fatal("live subdomain names should remain unique")
+	}
+}

@@ -17,7 +17,14 @@ import (
 type contextKey string
 
 const userContextKey contextKey = "auth_user"
+const authSourceContextKey contextKey = "auth_source"
 const userGinKey = "auth_user"
+const authSourceGinKey = "auth_source"
+
+const (
+	AuthSourceWeb = "web"
+	AuthSourceAPI = "api"
+)
 
 func APIBearerAuth() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
@@ -34,15 +41,20 @@ func APIBearerAuth() gin.HandlerFunc {
 		tokenHash := auth.HashBearerToken(strings.TrimPrefix(header, "Bearer "))
 		repo := repositories.NewAPIRepository(db)
 		token, err := repo.AuthenticateSession(ctx.Request.Context(), tokenHash)
+		source := AuthSourceWeb
 		if err != nil {
 			token, err = repo.AuthenticateToken(ctx.Request.Context(), tokenHash)
+			source = AuthSourceAPI
 		}
 		if err != nil {
 			writeAuthError(ctx, http.StatusUnauthorized, "UNAUTHORIZED", "令牌不存在或已失效")
 			return
 		}
-		ctx.Request = ctx.Request.WithContext(stdctx.WithValue(ctx.Request.Context(), userContextKey, token.User))
+		reqCtx := stdctx.WithValue(ctx.Request.Context(), userContextKey, token.User)
+		reqCtx = stdctx.WithValue(reqCtx, authSourceContextKey, source)
+		ctx.Request = ctx.Request.WithContext(reqCtx)
 		ctx.Set(userGinKey, token.User)
+		ctx.Set(authSourceGinKey, source)
 		ctx.Next()
 	}
 }
@@ -50,6 +62,14 @@ func APIBearerAuth() gin.HandlerFunc {
 func UserFromContext(ctx stdctx.Context) (models.User, bool) {
 	user, ok := ctx.Value(userContextKey).(models.User)
 	return user, ok
+}
+
+func SourceFromContext(ctx stdctx.Context) string {
+	source, _ := ctx.Value(authSourceContextKey).(string)
+	if source == AuthSourceAPI {
+		return AuthSourceAPI
+	}
+	return AuthSourceWeb
 }
 
 func AdminOnly() gin.HandlerFunc {

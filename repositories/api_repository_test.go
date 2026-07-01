@@ -2,6 +2,7 @@ package repositories
 
 import (
 	"context"
+	"errors"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -184,7 +185,8 @@ func TestAPIRepositoryPointsOverviewReturnsBalanceAndRecentRecords(t *testing.T)
 		(1, '消费', -30, 250, '注册二级域名[cdn.example.com]', ?)`, now, now, lastMonth); err != nil {
 		t.Fatal(err)
 	}
-	overview, err := NewAPIRepository(db).PointsOverview(context.Background(), 1)
+	repo := NewAPIRepository(db)
+	overview, err := repo.PointsOverview(context.Background(), 1, PointRecordFilter{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -196,6 +198,54 @@ func TestAPIRepositoryPointsOverviewReturnsBalanceAndRecentRecords(t *testing.T)
 	}
 	if overview.RecentRecords[0].Remark != "注册二级域名[cdn.example.com]" || overview.RecentRecords[2].Remark != "注册二级域名[api.example.com]" {
 		t.Fatalf("records not ordered by newest id first: %#v", overview.RecentRecords)
+	}
+	if !containsString(overview.Actions, "消费") || !containsString(overview.Actions, "充值") {
+		t.Fatalf("actions missing expected values: %#v", overview.Actions)
+	}
+	filtered, err := repo.PointsOverview(context.Background(), 1, PointRecordFilter{
+		Action:  "消费",
+		Keyword: "api",
+		Since:   monthStart.Unix(),
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(filtered.RecentRecords) != 1 || filtered.RecentRecords[0].Remark != "注册二级域名[api.example.com]" {
+		t.Fatalf("filtered records = %#v, want only api consume record", filtered.RecentRecords)
+	}
+}
+
+func TestAPIRepositoryFiltersUserSubdomains(t *testing.T) {
+	db := testMigratedDB(t)
+	defer db.Close()
+	seedAPIUser(t, db)
+	if _, err := db.Exec(`INSERT INTO dns_providers(key, config_ciphertext) VALUES ('fake', '{}')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO domains(id, provider_key, remote_zone_id, domain, group_policy, record_types)
+		VALUES (1, 'fake', 'z1', 'example.com', '0', 'A,CNAME')`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(`INSERT INTO subdomains(uid, did, name, full_domain, status, purpose, reject_reason) VALUES
+		(1, 1, 'active', 'active.example.com', 1, '站点', ''),
+		(1, 1, 'pending', 'pending.example.com', 2, '待审核用途', ''),
+		(1, 1, 'rejected', 'rejected.example.com', 3, '测试', '资料不完整')`); err != nil {
+		t.Fatal(err)
+	}
+	status := 1
+	items, err := NewAPIRepository(db).ListSubdomains(context.Background(), 1, SubdomainFilter{Status: &status})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].FullDomain != "active.example.com" {
+		t.Fatalf("status filtered subdomains = %#v", items)
+	}
+	items, err = NewAPIRepository(db).ListSubdomains(context.Background(), 1, SubdomainFilter{Keyword: "资料"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(items) != 1 || items[0].FullDomain != "rejected.example.com" {
+		t.Fatalf("keyword filtered subdomains = %#v", items)
 	}
 }
 
@@ -225,7 +275,7 @@ func TestAdminRepositoryDeleteGroupMovesUsersBeforeDeleting(t *testing.T) {
 	}
 }
 
-func TestAdminRepositoryUpdateUserCanCertifyAndResetPassword(t *testing.T) {
+func TestAdminRepositoryUpdateUserCanCertifyAndResetPasswordWithoutChangingPoints(t *testing.T) {
 	db := testMigratedDB(t)
 	defer db.Close()
 	if _, err := db.Exec(`INSERT INTO users(id, group_id, status, username, password_hash, sid, email, points)
@@ -238,7 +288,6 @@ func TestAdminRepositoryUpdateUserCanCertifyAndResetPassword(t *testing.T) {
 		Status:       2,
 		Username:     "alice-admin",
 		Email:        "alice-admin@example.com",
-		Points:       350,
 		PasswordHash: "new-hash",
 		SID:          "new-sid",
 	})
@@ -255,8 +304,78 @@ func TestAdminRepositoryUpdateUserCanCertifyAndResetPassword(t *testing.T) {
 		Scan(&groupID, &status, &username, &email, &points, &passwordHash, &sid); err != nil {
 		t.Fatal(err)
 	}
-	if groupID != 99 || status != 2 || username != "alice-admin" || email != "alice-admin@example.com" || points != 350 || passwordHash != "new-hash" || sid != "new-sid" {
+	if groupID != 99 || status != 2 || username != "alice-admin" || email != "alice-admin@example.com" || points != 100 || passwordHash != "new-hash" || sid != "new-sid" {
 		t.Fatalf("unexpected user after update: group=%d status=%d username=%s email=%s points=%d hash=%s sid=%s", groupID, status, username, email, points, passwordHash, sid)
+	}
+}
+
+func TestPointsRepositoryAdjustUserPointsRecordsPointAndAuditRows(t *testing.T) {
+	db := testMigratedDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO users(id, group_id, status, username, password_hash, sid, email, points)
+		VALUES
+		(1, 99, 2, 'admin', 'hash', 'sid-admin', 'admin@example.com', 0),
+		(2, 100, 2, 'alice', 'hash', 'sid-alice', 'alice@example.com', 100)`); err != nil {
+		t.Fatal(err)
+	}
+	repo := NewPointsRepository(db)
+	result, err := repo.AdjustUserPoints(context.Background(), PointAdjustment{
+		UserID: 2, AdminID: 1, Delta: 50, Action: "后台增加", Remark: "活动奖励",
+		Log: models.OperationLog{
+			UID: 2, AdminUID: 1, Source: "admin", TargetType: "user_points", TargetID: "2",
+			Action: "points.admin_increase", Message: "后台增加用户积分 [+50]",
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Balance != 150 || result.Delta != 50 || result.Username != "alice" {
+		t.Fatalf("unexpected adjust result: %#v", result)
+	}
+	var balance int64
+	if err := db.QueryRow(`SELECT points FROM users WHERE id = 2`).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if balance != 150 {
+		t.Fatalf("user balance = %d, want 150", balance)
+	}
+	var adminUID, points, rest int64
+	var action, remark string
+	if err := db.QueryRow(`SELECT COALESCE(admin_uid, 0), action, points, rest, remark FROM point_records WHERE uid = 2`).Scan(&adminUID, &action, &points, &rest, &remark); err != nil {
+		t.Fatal(err)
+	}
+	if adminUID != 1 || action != "后台增加" || points != 50 || rest != 150 || remark != "活动奖励" {
+		t.Fatalf("unexpected point record: admin=%d action=%s points=%d rest=%d remark=%s", adminUID, action, points, rest, remark)
+	}
+	var logCount int
+	if err := db.QueryRow(`SELECT COUNT(1) FROM operation_logs WHERE uid = 2 AND admin_uid = 1 AND action = 'points.admin_increase'`).Scan(&logCount); err != nil {
+		t.Fatal(err)
+	}
+	if logCount != 1 {
+		t.Fatalf("operation log count = %d, want 1", logCount)
+	}
+}
+
+func TestPointsRepositoryRejectsOverdraft(t *testing.T) {
+	db := testMigratedDB(t)
+	defer db.Close()
+	if _, err := db.Exec(`INSERT INTO users(id, group_id, status, username, password_hash, sid, email, points)
+		VALUES (1, 99, 2, 'admin', 'hash', 'sid-admin', 'admin@example.com', 0),
+			(2, 100, 2, 'alice', 'hash', 'sid-alice', 'alice@example.com', 30)`); err != nil {
+		t.Fatal(err)
+	}
+	_, err := NewPointsRepository(db).AdjustUserPoints(context.Background(), PointAdjustment{
+		UserID: 2, AdminID: 1, Delta: -50, Action: "后台扣除", Remark: "违规扣除",
+	})
+	if !errors.Is(err, ErrInsufficientPoints) {
+		t.Fatalf("adjust error = %v, want ErrInsufficientPoints", err)
+	}
+	var balance int64
+	if err := db.QueryRow(`SELECT points FROM users WHERE id = 2`).Scan(&balance); err != nil {
+		t.Fatal(err)
+	}
+	if balance != 30 {
+		t.Fatalf("balance after failed deduct = %d, want 30", balance)
 	}
 }
 
@@ -406,4 +525,13 @@ func seedAPIUser(t *testing.T, db *Database) {
 	if err != nil {
 		t.Fatal(err)
 	}
+}
+
+func containsString(values []string, expected string) bool {
+	for _, value := range values {
+		if value == expected {
+			return true
+		}
+	}
+	return false
 }

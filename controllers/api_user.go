@@ -151,7 +151,7 @@ func (c *RecordAPIController) Post() {
 		Type:        input.Type,
 		Value:       input.Value,
 		LineID:      input.LineID,
-		Source:      "api",
+		Source:      middleware.SourceFromContext(c.Ctx.Request.Context()),
 	})
 	if appErr != nil {
 		c.Fail(statusForCode(appErr.Code), appErr.Code, appErr.Message)
@@ -186,7 +186,7 @@ func (c *RecordAPIController) Put() {
 	}
 	result, appErr := service.Submit(c.Ctx.Request.Context(), services.SubmitRecordInput{
 		UserID: user.ID, ID: id, DID: input.DID, SubdomainID: input.SubdomainID, Name: input.Name,
-		Type: input.Type, Value: input.Value, LineID: input.LineID, Source: "api",
+		Type: input.Type, Value: input.Value, LineID: input.LineID, Source: middleware.SourceFromContext(c.Ctx.Request.Context()),
 	})
 	if appErr != nil {
 		c.Fail(statusForCode(appErr.Code), appErr.Code, appErr.Message)
@@ -207,7 +207,7 @@ func (c *RecordAPIController) Delete() {
 		Resolver: providerResolver(),
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
-	result, appErr := service.Delete(c.Ctx.Request.Context(), user.ID, id, "api")
+	result, appErr := service.Delete(c.Ctx.Request.Context(), user.ID, id, middleware.SourceFromContext(c.Ctx.Request.Context()))
 	if appErr != nil {
 		c.Fail(statusForCode(appErr.Code), appErr.Code, appErr.Message)
 		return
@@ -225,7 +225,18 @@ func (c *SubdomainAPIController) Get() {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	items, err := repositories.NewAPIRepository(app.DB()).ListSubdomains(c.Ctx.Request.Context(), user.ID)
+	filter := repositories.SubdomainFilter{
+		Keyword: strings.TrimSpace(c.GetString("keyword")),
+	}
+	if rawStatus := strings.TrimSpace(c.GetString("status")); rawStatus != "" {
+		status, err := strconv.Atoi(rawStatus)
+		if err != nil {
+			c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "状态筛选不正确")
+			return
+		}
+		filter.Status = &status
+	}
+	items, err := repositories.NewAPIRepository(app.DB()).ListSubdomains(c.Ctx.Request.Context(), user.ID, filter)
 	if err != nil {
 		c.Internal("获取二级域名失败")
 		return
@@ -240,8 +251,9 @@ func (c *SubdomainAPIController) Post() {
 		return
 	}
 	var input struct {
-		DID  int64  `json:"did"`
-		Name string `json:"name"`
+		DID     int64  `json:"did"`
+		Name    string `json:"name"`
+		Purpose string `json:"purpose"`
 	}
 	if err := json.Unmarshal(c.RawBody(), &input); err != nil {
 		c.Fail(http.StatusBadRequest, apperrors.CodeInvalidArgument, "请求 JSON 格式不正确")
@@ -252,7 +264,7 @@ func (c *SubdomainAPIController) Post() {
 		Reserved: settingsReserveNames(c.Ctx.Request.Context()),
 	}
 	result, appErr := service.Register(c.Ctx.Request.Context(), services.RegisterSubdomainInput{
-		UserID: user.ID, DID: input.DID, Name: input.Name, Source: "api",
+		UserID: user.ID, DID: input.DID, Name: input.Name, Purpose: input.Purpose, Source: middleware.SourceFromContext(c.Ctx.Request.Context()),
 	})
 	if appErr != nil {
 		c.Fail(statusForCode(appErr.Code), appErr.Code, appErr.Message)
@@ -279,7 +291,7 @@ func (c *SubdomainAPIController) Delete() {
 		Repo: repositories.NewRecordRepository(app.DB()),
 	}
 	result, appErr := service.Delete(c.Ctx.Request.Context(), services.DeleteSubdomainInput{
-		UserID: user.ID, ID: id, ConfirmFullDomain: input.ConfirmFullDomain, Source: "api",
+		UserID: user.ID, ID: id, ConfirmFullDomain: input.ConfirmFullDomain, Source: middleware.SourceFromContext(c.Ctx.Request.Context()),
 	})
 	if appErr != nil {
 		c.Fail(statusForCode(appErr.Code), appErr.Code, appErr.Message)
@@ -302,12 +314,28 @@ func (c *PointsAPIController) Get() {
 		c.Fail(http.StatusUnauthorized, apperrors.CodeUnauthorized, "未登录")
 		return
 	}
-	overview, err := repositories.NewAPIRepository(app.DB()).PointsOverview(c.Ctx.Request.Context(), user.ID)
+	overview, err := repositories.NewAPIRepository(app.DB()).PointsOverview(c.Ctx.Request.Context(), user.ID, repositories.PointRecordFilter{
+		Action:  strings.TrimSpace(c.GetString("action")),
+		Keyword: strings.TrimSpace(c.GetString("keyword")),
+		Since:   pointRecordSince(c.GetString("range")),
+	})
 	if err != nil {
 		c.Internal("获取积分明细失败")
 		return
 	}
 	c.OK(overview)
+}
+
+func pointRecordSince(value string) int64 {
+	value = strings.TrimSpace(strings.ToLower(value))
+	if value == "" || value == "all" {
+		return 0
+	}
+	days, err := strconv.Atoi(value)
+	if err != nil || days <= 0 {
+		return 0
+	}
+	return time.Now().Unix() - int64(days)*86400
 }
 
 func (c *TokenAPIController) Get() {

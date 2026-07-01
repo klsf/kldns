@@ -35,7 +35,6 @@ type UserWrite struct {
 	Status       int    `json:"status"`
 	Username     string `json:"username"`
 	Email        string `json:"email"`
-	Points       int64  `json:"points"`
 	PasswordHash string `json:"-"`
 	SID          string `json:"-"`
 }
@@ -99,8 +98,8 @@ func (r *UsersRepository) ListUsersPage(ctx context.Context, filter UserAdminFil
 
 func (r *UsersRepository) UpdateUser(ctx context.Context, input UserWrite) (bool, error) {
 	query := `UPDATE users
-		SET group_id = ?, status = ?, username = ?, email = NULLIF(?, ''), points = ?, updated_at = strftime('%s','now')`
-	args := []any{input.GroupID, boolStatus(input.Status), input.Username, input.Email, maxInt64(input.Points, 0)}
+		SET group_id = ?, status = ?, username = ?, email = NULLIF(?, ''), updated_at = strftime('%s','now')`
+	args := []any{input.GroupID, boolStatus(input.Status), input.Username, input.Email}
 	if strings.TrimSpace(input.PasswordHash) != "" {
 		query += `, password_hash = ?, sid = ?`
 		args = append(args, input.PasswordHash, input.SID)

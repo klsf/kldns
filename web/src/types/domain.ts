@@ -12,6 +12,7 @@ export interface Domain {
   record_types: string[]
   beian: number
   beian_text: string
+  require_review: number
   line?: RecordLine[]
 }
 
@@ -22,6 +23,10 @@ export interface Subdomain {
   name: string
   full_domain: string
   status: number
+  purpose: string
+  reject_reason: string
+  reviewed_by: number
+  reviewed_at: number
   domain: string
   registration_cost: number
   record_types: string[]

@@ -115,7 +115,7 @@ Authenticated with `Authorization: Bearer <token>`:
 - `PUT /auth/password`
 - `GET /domains`
 - `GET /subdomains`
-- `POST /subdomains`
+- `POST /subdomains` (when the selected domain requires review, include `purpose`)
 - `GET /records`
 - `POST /records`
 - `PUT /records/:id`
@@ -137,6 +137,8 @@ Admin only:
 - `POST /admin/records`
 - `PUT|DELETE /admin/records/:id`
 - `GET /admin/subdomains`
+- `POST /admin/subdomains/:id/approve`
+- `POST /admin/subdomains/:id/reject`
 - `GET /admin/logs`
 - `GET|PUT /admin/settings`
 
@@ -150,7 +152,7 @@ Responses use the common envelope:
 }
 ```
 
-Users spend points once to register a second-level domain under an open main domain. Record create, update, and delete operations under that registered domain are direct DNS writes and do not create review records.
+Users spend points once to register a second-level domain under an open main domain. A main domain may require registration review; in that mode the user must submit a purpose, points are held at submission time, and a rejected or user-cancelled pending application refunds the held points. Record create, update, and delete operations under an approved registered domain are direct DNS writes and do not create review records.
 
 ## DNS Write Consistency
 

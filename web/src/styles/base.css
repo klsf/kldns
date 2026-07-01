@@ -217,13 +217,21 @@ select {
 
 .toolbar-row {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  align-items: center;
   gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-strong);
+  scrollbar-width: thin;
+}
+
+.toolbar-row > .el-button {
+  flex: 0 0 auto;
 }
 
 .resource-note {
@@ -277,8 +285,20 @@ select {
 }
 
 .toolbar-control {
-  width: 220px;
+  flex: 0 0 160px;
+  width: 160px;
   max-width: 100%;
+}
+
+.toolbar-row .wide-admin-search,
+.toolbar-row .wide-search {
+  flex: 0 0 240px;
+  width: 240px;
+}
+
+.toolbar-row .small-control {
+  flex: 0 0 130px;
+  width: 130px;
 }
 
 .responsive-table {
@@ -548,8 +568,18 @@ select {
     margin-top: 1px;
   }
 
-  .toolbar-control {
+  .toolbar-row {
+    flex-wrap: wrap;
+    overflow: visible;
+  }
+
+  .toolbar-control,
+  .toolbar-row .wide-admin-search,
+  .toolbar-row .wide-search,
+  .toolbar-row .small-control {
+    flex: 1 1 100%;
     width: 100%;
+    max-width: 100%;
   }
 
   .resource-pagination {

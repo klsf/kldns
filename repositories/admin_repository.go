@@ -109,6 +109,7 @@ type RecordAdminFilter struct {
 
 type SubdomainAdminFilter struct {
 	DID     int64
+	Status  *int
 	Keyword string
 }
 
@@ -131,6 +132,10 @@ type AdminSubdomainSummary struct {
 	Name             string `json:"name"`
 	FullDomain       string `json:"full_domain"`
 	Status           int    `json:"status"`
+	Purpose          string `json:"purpose"`
+	RejectReason     string `json:"reject_reason"`
+	ReviewedBy       int64  `json:"reviewed_by"`
+	ReviewedAt       int64  `json:"reviewed_at"`
 	Username         string `json:"username"`
 	Domain           string `json:"domain"`
 	RecordCount      int64  `json:"record_count"`
@@ -232,11 +237,15 @@ func (r *AdminRepository) ListAllSubdomainsPage(ctx context.Context, filter Subd
 		fromWhere += ` AND s.did = ?`
 		args = append(args, filter.DID)
 	}
+	if filter.Status != nil {
+		fromWhere += ` AND s.status = ?`
+		args = append(args, *filter.Status)
+	}
 	if term := likeTerm(filter.Keyword); term != "" {
 		fromWhere += ` AND (
-			lower(s.full_domain) LIKE ? OR lower(s.name) LIKE ? OR lower(COALESCE(d.domain, '')) LIKE ? OR lower(COALESCE(u.username, '')) LIKE ?
+			lower(s.full_domain) LIKE ? OR lower(s.name) LIKE ? OR lower(COALESCE(d.domain, '')) LIKE ? OR lower(COALESCE(u.username, '')) LIKE ? OR lower(COALESCE(s.reject_reason, '')) LIKE ?
 		)`
-		args = append(args, term, term, term, term)
+		args = append(args, term, term, term, term, term)
 	}
 	total := int64(0)
 	if page.Enabled() {
@@ -248,7 +257,7 @@ func (r *AdminRepository) ListAllSubdomainsPage(ctx context.Context, filter Subd
 		}
 	}
 	query := `SELECT
-			s.id, s.uid, s.did, s.name, s.full_domain, s.status, s.created_at,
+			s.id, s.uid, s.did, s.name, s.full_domain, s.status, COALESCE(s.purpose, ''), COALESCE(s.reject_reason, ''), COALESCE(s.reviewed_by, 0), COALESCE(s.reviewed_at, 0), s.created_at,
 			COALESCE(u.username, ''), COALESCE(d.domain, ''), COALESCE(d.points_cost, 0), COUNT(rec.id)
 		` + fromWhere
 	query += ` GROUP BY s.id ORDER BY s.id DESC`
@@ -264,7 +273,7 @@ func (r *AdminRepository) ListAllSubdomainsPage(ctx context.Context, filter Subd
 	items := []AdminSubdomainSummary{}
 	for rows.Next() {
 		var item AdminSubdomainSummary
-		if err := rows.Scan(&item.ID, &item.UID, &item.DID, &item.Name, &item.FullDomain, &item.Status, &item.CreatedAt, &item.Username, &item.Domain, &item.RegistrationCost, &item.RecordCount); err != nil {
+		if err := rows.Scan(&item.ID, &item.UID, &item.DID, &item.Name, &item.FullDomain, &item.Status, &item.Purpose, &item.RejectReason, &item.ReviewedBy, &item.ReviewedAt, &item.CreatedAt, &item.Username, &item.Domain, &item.RegistrationCost, &item.RecordCount); err != nil {
 			return PageResult[AdminSubdomainSummary]{}, err
 		}
 		items = append(items, item)

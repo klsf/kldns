@@ -84,6 +84,9 @@
           <el-form-item label="备案状态">
             <el-switch v-model="form.beian" :active-value="1" :inactive-value="0" />
           </el-form-item>
+          <el-form-item label="注册审核">
+            <el-switch v-model="form.require_review" :active-value="1" :inactive-value="0" active-text="开启" inactive-text="关闭" />
+          </el-form-item>
           <el-form-item label="注册积分">
             <el-input-number v-model="form.points_cost" :min="0" class="full-control" />
           </el-form-item>
@@ -140,6 +143,7 @@ const form = reactive({
   record_types: [...defaultRecordTypes] as string[],
   beian: 0,
   points_cost: 0,
+  require_review: 0,
   description: '',
 })
 
@@ -171,6 +175,7 @@ function openCreate() {
     record_types: [...defaultRecordTypes],
     beian: 0,
     points_cost: 0,
+    require_review: 0,
     description: '',
   })
   selectedGroups.value = [0]

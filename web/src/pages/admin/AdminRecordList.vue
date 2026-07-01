@@ -339,7 +339,8 @@ function statusText(status: number) {
 
 <style scoped>
 .wide-admin-search {
-  width: 320px;
+  flex: 0 0 240px;
+  width: 240px;
 }
 
 .record-cell {
@@ -382,11 +383,14 @@ function statusText(status: number) {
   grid-column: 1 / -1;
 }
 
-@media (max-width: 680px) {
+@media (max-width: 980px) {
   .wide-admin-search {
+    flex: 1 1 100%;
     width: 100%;
   }
+}
 
+@media (max-width: 680px) {
   .record-form-grid {
     grid-template-columns: 1fr;
   }

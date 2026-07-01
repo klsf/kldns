@@ -75,19 +75,29 @@ func runMigrations(
 		if strings.TrimSpace(sqlText) == "" {
 			return fmt.Errorf("migration %s has empty up section", file)
 		}
+		if _, err := db.Exec("PRAGMA foreign_keys = OFF"); err != nil {
+			return err
+		}
 		tx, err := db.Begin()
 		if err != nil {
+			_, _ = db.Exec("PRAGMA foreign_keys = ON")
 			return err
 		}
 		if _, err := tx.Exec(sqlText); err != nil {
 			_ = tx.Rollback()
+			_, _ = db.Exec("PRAGMA foreign_keys = ON")
 			return fmt.Errorf("apply migration %s: %w", file, err)
 		}
 		if _, err := tx.Exec("INSERT INTO schema_migrations(version) VALUES (?)", file); err != nil {
 			_ = tx.Rollback()
+			_, _ = db.Exec("PRAGMA foreign_keys = ON")
 			return err
 		}
 		if err := tx.Commit(); err != nil {
+			_, _ = db.Exec("PRAGMA foreign_keys = ON")
+			return err
+		}
+		if _, err := db.Exec("PRAGMA foreign_keys = ON"); err != nil {
 			return err
 		}
 	}

@@ -32,6 +32,9 @@
           <el-menu-item index="/admin/groups">
             <span>分组列表</span>
           </el-menu-item>
+          <el-menu-item index="/admin/points">
+            <span>积分明细</span>
+          </el-menu-item>
         </el-sub-menu>
         <el-sub-menu index="domains">
           <template #title>
@@ -105,7 +108,7 @@ const router = useRouter()
 const route = useRoute()
 const auth = useAuthStore()
 const menuOpen = ref(false)
-const userMenuPaths = ['/admin/users', '/admin/groups']
+const userMenuPaths = ['/admin/users', '/admin/groups', '/admin/points']
 const domainMenuPaths = ['/admin/domains', '/admin/subdomains', '/admin/records', '/admin/providers']
 const activeMenu = computed(() => (route.path === '/admin/' ? '/admin' : route.path))
 const openMenus = computed(() => {

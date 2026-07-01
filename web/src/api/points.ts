@@ -13,9 +13,16 @@ export interface PointsOverview {
   balance: number
   month_spent: number
   total_spent: number
+  actions: string[]
   recent_records: PointRecord[]
 }
 
-export function pointsOverview() {
-  return http.get<unknown, ApiEnvelope<PointsOverview>>('/points')
+export interface PointRecordQuery {
+  action?: string
+  keyword?: string
+  range?: string
+}
+
+export function pointsOverview(params: PointRecordQuery = {}) {
+  return http.get<unknown, ApiEnvelope<PointsOverview>>('/points', { params })
 }

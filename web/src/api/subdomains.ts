@@ -1,11 +1,16 @@
 import { http, type ApiEnvelope } from './http'
 import type { Subdomain } from '../types/domain'
 
-export function listSubdomains() {
-  return http.get<unknown, ApiEnvelope<Subdomain[]>>('/subdomains')
+export interface SubdomainQuery {
+  status?: number
+  keyword?: string
 }
 
-export function registerSubdomain(payload: { did: number; name: string }) {
+export function listSubdomains(params: SubdomainQuery = {}) {
+  return http.get<unknown, ApiEnvelope<Subdomain[]>>('/subdomains', { params })
+}
+
+export function registerSubdomain(payload: { did: number; name: string; purpose?: string }) {
   return http.post<unknown, ApiEnvelope<Subdomain>>('/subdomains', payload)
 }
 

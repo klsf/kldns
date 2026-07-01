@@ -38,6 +38,7 @@ type DomainSummary struct {
 	RecordTypes              []string         `json:"record_types"`
 	Beian                    int              `json:"beian"`
 	BeianText                string           `json:"beian_text"`
+	RequireReview            int              `json:"require_review"`
 	Line                     []dns.RecordLine `json:"line"`
 	ProviderKey              string           `json:"-"`
 	ProviderConfigCiphertext string           `json:"-"`
@@ -69,6 +70,10 @@ type SubdomainSummary struct {
 	Name             string   `json:"name"`
 	FullDomain       string   `json:"full_domain"`
 	Status           int      `json:"status"`
+	Purpose          string   `json:"purpose"`
+	RejectReason     string   `json:"reject_reason"`
+	ReviewedBy       int64    `json:"reviewed_by"`
+	ReviewedAt       int64    `json:"reviewed_at"`
 	Domain           string   `json:"domain"`
 	RegistrationCost int64    `json:"registration_cost"`
 	RecordTypes      []string `json:"record_types"`
@@ -98,6 +103,7 @@ type PointsOverview struct {
 	Balance       int64                `json:"balance"`
 	MonthSpent    int64                `json:"month_spent"`
 	TotalSpent    int64                `json:"total_spent"`
+	Actions       []string             `json:"actions"`
 	RecentRecords []PointRecordSummary `json:"recent_records"`
 }
 
@@ -110,6 +116,17 @@ type RecordFilter struct {
 	SubdomainID int64
 	Type        string
 	Keyword     string
+}
+
+type SubdomainFilter struct {
+	Status  *int
+	Keyword string
+}
+
+type PointRecordFilter struct {
+	Action  string
+	Keyword string
+	Since   int64
 }
 
 func (r *APIRepository) AuthenticateSession(ctx context.Context, tokenHash string) (TokenWithUser, error) {
@@ -176,7 +193,7 @@ func (r *APIRepository) CreateSession(ctx context.Context, uid int64, tokenHash 
 }
 
 func (r *APIRepository) ListAvailableDomains(ctx context.Context, gid int64, filter DomainFilter) ([]DomainSummary, error) {
-	query := `SELECT id, domain, points_cost, COALESCE(description, ''), record_types, beian,
+	query := `SELECT id, domain, points_cost, COALESCE(description, ''), record_types, beian, require_review,
 			provider_key, COALESCE(provider_config_ciphertext, ''), remote_zone_id
 		FROM domains
 		WHERE (group_policy = '0' OR instr(',' || group_policy || ',', ',' || ? || ',') > 0)`
@@ -195,7 +212,7 @@ func (r *APIRepository) ListAvailableDomains(ctx context.Context, gid int64, fil
 	for rows.Next() {
 		var item DomainSummary
 		var recordTypes string
-		if err := rows.Scan(&item.ID, &item.Domain, &item.PointsCost, &item.Description, &recordTypes, &item.Beian, &item.ProviderKey, &item.ProviderConfigCiphertext, &item.RemoteZoneID); err != nil {
+		if err := rows.Scan(&item.ID, &item.Domain, &item.PointsCost, &item.Description, &recordTypes, &item.Beian, &item.RequireReview, &item.ProviderKey, &item.ProviderConfigCiphertext, &item.RemoteZoneID); err != nil {
 			return nil, err
 		}
 		item.RegistrationCost = item.PointsCost
@@ -211,7 +228,7 @@ func (r *APIRepository) ListAvailableDomains(ctx context.Context, gid int64, fil
 }
 
 func (r *APIRepository) ListPublicDomains(ctx context.Context) ([]DomainSummary, error) {
-	rows, err := r.DB.QueryContext(ctx, `SELECT id, domain, points_cost, COALESCE(description, ''), record_types, beian, group_policy
+	rows, err := r.DB.QueryContext(ctx, `SELECT id, domain, points_cost, COALESCE(description, ''), record_types, beian, require_review, group_policy
 		FROM domains
 		ORDER BY id DESC`)
 	if err != nil {
@@ -223,7 +240,7 @@ func (r *APIRepository) ListPublicDomains(ctx context.Context) ([]DomainSummary,
 		var item DomainSummary
 		var recordTypes string
 		var groupPolicy string
-		if err := rows.Scan(&item.ID, &item.Domain, &item.PointsCost, &item.Description, &recordTypes, &item.Beian, &groupPolicy); err != nil {
+		if err := rows.Scan(&item.ID, &item.Domain, &item.PointsCost, &item.Description, &recordTypes, &item.Beian, &item.RequireReview, &groupPolicy); err != nil {
 			return nil, err
 		}
 		if isAdminOnlyGroupPolicy(groupPolicy) {
@@ -241,16 +258,28 @@ func (r *APIRepository) ListPublicDomains(ctx context.Context) ([]DomainSummary,
 	return items, rows.Err()
 }
 
-func (r *APIRepository) ListSubdomains(ctx context.Context, uid int64) ([]SubdomainSummary, error) {
-	rows, err := r.DB.QueryContext(ctx, `SELECT
-			s.id, s.uid, s.did, s.name, s.full_domain, s.status, s.created_at,
+func (r *APIRepository) ListSubdomains(ctx context.Context, uid int64, filter SubdomainFilter) ([]SubdomainSummary, error) {
+	query := `SELECT
+			s.id, s.uid, s.did, s.name, s.full_domain, s.status, COALESCE(s.purpose, ''), COALESCE(s.reject_reason, ''), COALESCE(s.reviewed_by, 0), COALESCE(s.reviewed_at, 0), s.created_at,
 			d.domain, d.points_cost, d.record_types, COUNT(r.id)
 		FROM subdomains s
 		JOIN domains d ON d.id = s.did
 		LEFT JOIN records r ON r.subdomain_id = s.id
-		WHERE s.uid = ?
-		GROUP BY s.id
-		ORDER BY s.id DESC`, uid)
+		WHERE s.uid = ?`
+	args := []any{uid}
+	if filter.Status != nil {
+		query += ` AND s.status = ?`
+		args = append(args, *filter.Status)
+	}
+	if term := likeTerm(filter.Keyword); term != "" {
+		query += ` AND (
+			lower(s.name) LIKE ? OR lower(s.full_domain) LIKE ? OR lower(d.domain) LIKE ? OR
+			lower(COALESCE(s.purpose, '')) LIKE ? OR lower(COALESCE(s.reject_reason, '')) LIKE ?
+		)`
+		args = append(args, term, term, term, term, term)
+	}
+	query += ` GROUP BY s.id ORDER BY s.id DESC`
+	rows, err := r.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -259,7 +288,7 @@ func (r *APIRepository) ListSubdomains(ctx context.Context, uid int64) ([]Subdom
 	for rows.Next() {
 		var item SubdomainSummary
 		var recordTypes string
-		if err := rows.Scan(&item.ID, &item.UID, &item.DID, &item.Name, &item.FullDomain, &item.Status, &item.CreatedAt, &item.Domain, &item.RegistrationCost, &recordTypes, &item.RecordCount); err != nil {
+		if err := rows.Scan(&item.ID, &item.UID, &item.DID, &item.Name, &item.FullDomain, &item.Status, &item.Purpose, &item.RejectReason, &item.ReviewedBy, &item.ReviewedAt, &item.CreatedAt, &item.Domain, &item.RegistrationCost, &recordTypes, &item.RecordCount); err != nil {
 			return nil, err
 		}
 		item.RecordTypes = splitCSV(recordTypes)
@@ -331,7 +360,7 @@ func (r *APIRepository) ListTokens(ctx context.Context, uid int64) ([]TokenSumma
 	return items, rows.Err()
 }
 
-func (r *APIRepository) PointsOverview(ctx context.Context, uid int64) (PointsOverview, error) {
+func (r *APIRepository) PointsOverview(ctx context.Context, uid int64, filter PointRecordFilter) (PointsOverview, error) {
 	var result PointsOverview
 	if err := r.DB.QueryRowContext(ctx, `SELECT points FROM users WHERE id = ?`, uid).Scan(&result.Balance); err != nil {
 		return PointsOverview{}, err
@@ -345,11 +374,46 @@ func (r *APIRepository) PointsOverview(ctx context.Context, uid int64) (PointsOv
 		WHERE uid = ?`, monthStart.Unix(), uid).Scan(&result.TotalSpent, &result.MonthSpent); err != nil {
 		return PointsOverview{}, err
 	}
-	rows, err := r.DB.QueryContext(ctx, `SELECT id, action, points, rest, COALESCE(remark, ''), created_at
+
+	actionRows, err := r.DB.QueryContext(ctx, `SELECT action
 		FROM point_records
-		WHERE uid = ?
-		ORDER BY id DESC
-		LIMIT 100`, uid)
+		WHERE uid = ? AND COALESCE(action, '') != ''
+		GROUP BY action
+		ORDER BY action ASC`, uid)
+	if err != nil {
+		return PointsOverview{}, err
+	}
+	result.Actions = []string{}
+	for actionRows.Next() {
+		var action string
+		if err := actionRows.Scan(&action); err != nil {
+			actionRows.Close()
+			return PointsOverview{}, err
+		}
+		result.Actions = append(result.Actions, action)
+	}
+	if err := actionRows.Close(); err != nil {
+		return PointsOverview{}, err
+	}
+
+	query := `SELECT id, action, points, rest, COALESCE(remark, ''), created_at
+		FROM point_records
+		WHERE uid = ?`
+	args := []any{uid}
+	if action := strings.TrimSpace(filter.Action); action != "" {
+		query += ` AND action = ?`
+		args = append(args, action)
+	}
+	if filter.Since > 0 {
+		query += ` AND created_at >= ?`
+		args = append(args, filter.Since)
+	}
+	if term := likeTerm(filter.Keyword); term != "" {
+		query += ` AND (lower(action) LIKE ? OR lower(COALESCE(remark, '')) LIKE ?)`
+		args = append(args, term, term)
+	}
+	query += ` ORDER BY id DESC LIMIT 100`
+	rows, err := r.DB.QueryContext(ctx, query, args...)
 	if err != nil {
 		return PointsOverview{}, err
 	}

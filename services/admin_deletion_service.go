@@ -53,6 +53,9 @@ func (s *AdminDeletionService) DeleteSubdomain(ctx context.Context, adminID int6
 	if err != nil {
 		return AdminDeleteResult{}, apperrors.Wrap(apperrors.CodeNotFound, "二级域名不存在", err)
 	}
+	if subdomain.Status == models.SubdomainStatusPending {
+		return AdminDeleteResult{}, apperrors.New(apperrors.CodeConflict, "待审核申请请使用审核驳回处理")
+	}
 	records, err := s.Repo.ListRecordsForSubdomain(ctx, subdomain.ID)
 	if err != nil {
 		return AdminDeleteResult{}, apperrors.Wrap(apperrors.CodeInternal, "读取二级域名解析记录失败", err)

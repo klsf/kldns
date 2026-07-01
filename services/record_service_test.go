@@ -136,6 +136,38 @@ func TestSubdomainServiceRegistersAndChargesOnce(t *testing.T) {
 	}
 }
 
+func TestSubdomainServiceRequiresPurposeWhenDomainRequiresReview(t *testing.T) {
+	repo := &fakeRecordRepo{
+		user:   models.User{ID: 1, GroupID: 100, Status: 2, Points: 10},
+		domain: models.Domain{ID: 1, Domain: "example.com", PointsCost: 3, RequireReview: 1},
+	}
+	service := SubdomainService{Repo: repo}
+
+	_, appErr := service.Register(context.Background(), RegisterSubdomainInput{UserID: 1, DID: 1, Name: "dd"})
+	if appErr == nil || appErr.Code != apperrors.CodeInvalidArgument {
+		t.Fatalf("appErr=%#v, want invalid purpose", appErr)
+	}
+	if repo.subdomainRegistered {
+		t.Fatal("subdomain should not be registered without purpose")
+	}
+}
+
+func TestSubdomainServiceRegistersPendingWhenDomainRequiresReview(t *testing.T) {
+	repo := &fakeRecordRepo{
+		user:   models.User{ID: 1, GroupID: 100, Status: 2, Points: 10},
+		domain: models.Domain{ID: 1, Domain: "example.com", PointsCost: 3, RequireReview: 1},
+	}
+	service := SubdomainService{Repo: repo}
+
+	subdomain, appErr := service.Register(context.Background(), RegisterSubdomainInput{UserID: 1, DID: 1, Name: "dd", Purpose: "个人博客"})
+	if appErr != nil {
+		t.Fatal(appErr)
+	}
+	if subdomain.Status != models.SubdomainStatusPending || subdomain.Purpose != "个人博客" {
+		t.Fatalf("subdomain=%#v, want pending with purpose", subdomain)
+	}
+}
+
 func TestSubdomainServiceDeleteRequiresFullDomainConfirmation(t *testing.T) {
 	repo := &fakeRecordRepo{
 		user:      models.User{ID: 1, GroupID: 100, Status: 2},
@@ -150,6 +182,40 @@ func TestSubdomainServiceDeleteRequiresFullDomainConfirmation(t *testing.T) {
 	}
 	if repo.subdomainDeleted {
 		t.Fatal("subdomain should not be deleted")
+	}
+}
+
+func TestSubdomainServiceCancelsPendingAndRefunds(t *testing.T) {
+	repo := &fakeRecordRepo{
+		user:      models.User{ID: 1, GroupID: 100, Status: 2},
+		domain:    models.Domain{ID: 1, Domain: "example.com", PointsCost: 3},
+		subdomain: models.Subdomain{ID: 9, UID: 1, DID: 1, Name: "dd", FullDomain: "dd.example.com", Status: models.SubdomainStatusPending},
+	}
+	service := SubdomainService{Repo: repo}
+
+	result, appErr := service.Delete(context.Background(), DeleteSubdomainInput{UserID: 1, ID: 9, ConfirmFullDomain: "dd.example.com"})
+	if appErr != nil {
+		t.Fatal(appErr)
+	}
+	if !result.Deleted || !repo.pendingCancelled || repo.subdomainDeleted {
+		t.Fatalf("result=%#v pendingCancelled=%v subdomainDeleted=%v", result, repo.pendingCancelled, repo.subdomainDeleted)
+	}
+}
+
+func TestSubdomainServiceDeletesRejectedHistoryWithoutRefund(t *testing.T) {
+	repo := &fakeRecordRepo{
+		user:      models.User{ID: 1, GroupID: 100, Status: 2},
+		domain:    models.Domain{ID: 1, Domain: "example.com", PointsCost: 3},
+		subdomain: models.Subdomain{ID: 9, UID: 1, DID: 1, Name: "dd", FullDomain: "dd.example.com", Status: models.SubdomainStatusRejected, RejectReason: "用途不合规"},
+	}
+	service := SubdomainService{Repo: repo}
+
+	result, appErr := service.Delete(context.Background(), DeleteSubdomainInput{UserID: 1, ID: 9, ConfirmFullDomain: "dd.example.com"})
+	if appErr != nil {
+		t.Fatal(appErr)
+	}
+	if !result.Deleted || !repo.subdomainDeleted || repo.pendingCancelled {
+		t.Fatalf("result=%#v subdomainDeleted=%v pendingCancelled=%v", result, repo.subdomainDeleted, repo.pendingCancelled)
 	}
 }
 
@@ -202,6 +268,38 @@ func TestAdminRecordServiceCreatesDirectRecord(t *testing.T) {
 	}
 	if result.Mode != "direct" || !provider.created || !repo.adminCreated {
 		t.Fatalf("result=%#v created=%v adminCreated=%v", result, provider.created, repo.adminCreated)
+	}
+}
+
+func TestAdminSubdomainReviewServiceApprovesPendingSubdomain(t *testing.T) {
+	repo := &fakeRecordRepo{
+		subdomain: models.Subdomain{ID: 9, UID: 1, DID: 1, Name: "dd", FullDomain: "dd.example.com", Status: models.SubdomainStatusPending, Purpose: "个人博客"},
+		domain:    models.Domain{ID: 1, Domain: "example.com", PointsCost: 3},
+	}
+	service := AdminSubdomainReviewService{Repo: repo}
+
+	result, appErr := service.Approve(context.Background(), 99, 9, "admin")
+	if appErr != nil {
+		t.Fatal(appErr)
+	}
+	if !result.Reviewed || result.Action != "approve" || !repo.subdomainApproved {
+		t.Fatalf("result=%#v approved=%v", result, repo.subdomainApproved)
+	}
+}
+
+func TestAdminSubdomainReviewServiceRejectsPendingSubdomainAndRefunds(t *testing.T) {
+	repo := &fakeRecordRepo{
+		subdomain: models.Subdomain{ID: 9, UID: 1, DID: 1, Name: "dd", FullDomain: "dd.example.com", Status: models.SubdomainStatusPending, Purpose: "个人博客"},
+		domain:    models.Domain{ID: 1, Domain: "example.com", PointsCost: 3},
+	}
+	service := AdminSubdomainReviewService{Repo: repo}
+
+	result, appErr := service.Reject(context.Background(), 99, 9, "用途不合规", "admin")
+	if appErr != nil {
+		t.Fatal(appErr)
+	}
+	if !result.Reviewed || result.Action != "reject" || result.Refund != 3 || !repo.pendingRejected || repo.pendingCancelled {
+		t.Fatalf("result=%#v pendingRejected=%v pendingCancelled=%v", result, repo.pendingRejected, repo.pendingCancelled)
 	}
 }
 
@@ -334,6 +432,9 @@ type fakeRecordRepo struct {
 	jobCreated            bool
 	subdomainRegistered   bool
 	subdomainDeleted      bool
+	pendingCancelled      bool
+	pendingRejected       bool
+	subdomainApproved     bool
 	adminSubdomainDeleted bool
 	adminUserDeleted      bool
 	adminDomainDeleted    bool
@@ -358,13 +459,21 @@ func (r *fakeRecordRepo) GetSubdomainForUser(context.Context, int64, int64) (mod
 	return r.subdomain, r.domain, nil
 }
 
+func (r *fakeRecordRepo) GetUserSubdomain(context.Context, int64, int64) (models.Subdomain, models.Domain, error) {
+	return r.subdomain, r.domain, nil
+}
+
 func (r *fakeRecordRepo) GetSubdomain(context.Context, int64) (models.Subdomain, models.Domain, error) {
 	return r.subdomain, r.domain, nil
 }
 
-func (r *fakeRecordRepo) RegisterSubdomain(context.Context, models.User, models.Domain, string, models.OperationLog) (models.Subdomain, error) {
+func (r *fakeRecordRepo) RegisterSubdomain(_ context.Context, _ models.User, _ models.Domain, _ string, purpose string, requireReview bool, _ models.OperationLog) (models.Subdomain, error) {
 	r.subdomainRegistered = true
-	return models.Subdomain{ID: 9, UID: r.user.ID, DID: r.domain.ID, Name: "dd", FullDomain: "dd.example.com", Status: 1}, nil
+	status := models.SubdomainStatusActive
+	if requireReview {
+		status = models.SubdomainStatusPending
+	}
+	return models.Subdomain{ID: 9, UID: r.user.ID, DID: r.domain.ID, Name: "dd", FullDomain: "dd.example.com", Status: status, Purpose: purpose}, nil
 }
 
 func (r *fakeRecordRepo) CountRecordsForSubdomain(context.Context, int64, int64) (int64, error) {
@@ -378,6 +487,21 @@ func (r *fakeRecordRepo) DeleteSubdomain(context.Context, models.Subdomain, mode
 
 func (r *fakeRecordRepo) DeleteAdminSubdomain(context.Context, models.Subdomain, models.OperationLog) error {
 	r.adminSubdomainDeleted = true
+	return nil
+}
+
+func (r *fakeRecordRepo) ApproveSubdomain(context.Context, models.Subdomain, models.OperationLog) error {
+	r.subdomainApproved = true
+	return nil
+}
+
+func (r *fakeRecordRepo) CancelPendingSubdomain(context.Context, models.Subdomain, models.Domain, string, models.OperationLog) error {
+	r.pendingCancelled = true
+	return nil
+}
+
+func (r *fakeRecordRepo) RejectPendingSubdomain(context.Context, models.Subdomain, models.Domain, string, string, models.OperationLog) error {
+	r.pendingRejected = true
 	return nil
 }
 

@@ -32,28 +32,21 @@
     </section>
 
     <section class="resource-card point-record-card">
-      <div class="table-card-head">
-        <h2>积分明细</h2>
-        <div class="point-filter-row">
-          <el-select v-model="actionFilter" class="filter-control" placeholder="全部类型">
-            <el-option label="全部类型" value="" />
-            <el-option v-for="action in actions" :key="action" :label="action" :value="action" />
-          </el-select>
-          <el-select v-model="rangeFilter" class="filter-control" placeholder="最近 30 天">
-            <el-option label="全部时间" value="all" />
-            <el-option label="最近 7 天" value="7" />
-            <el-option label="最近 30 天" value="30" />
-            <el-option label="最近 90 天" value="90" />
-          </el-select>
-          <el-input v-model="keyword" clearable class="search-control" placeholder="搜索说明">
-            <template #prefix>
-              <Search :size="16" />
-            </template>
-          </el-input>
-        </div>
+      <div class="toolbar-row point-filter-row">
+        <el-select v-model="actionFilter" clearable class="toolbar-control" placeholder="类型" @change="load">
+          <el-option v-for="action in overview.actions" :key="action" :label="action" :value="action" />
+        </el-select>
+        <el-select v-model="rangeFilter" class="toolbar-control range-filter" placeholder="时间范围" @change="load">
+          <el-option label="全部时间" value="all" />
+          <el-option label="最近 7 天" value="7" />
+          <el-option label="最近 30 天" value="30" />
+          <el-option label="最近 90 天" value="90" />
+        </el-select>
+        <el-input v-model="keyword" clearable class="toolbar-control wide-search" placeholder="搜索说明" @keyup.enter="load" @clear="load" />
+        <el-button @click="load">刷新</el-button>
       </div>
 
-      <el-table v-loading="loading" :data="filteredRecords" class="responsive-table points-table">
+      <el-table v-loading="loading" :data="overview.recent_records" class="responsive-table points-table">
         <el-table-column label="时间" min-width="170">
           <template #default="{ row }">{{ formatTime(row.created_at) }}</template>
         </el-table-column>
@@ -72,7 +65,7 @@
       </el-table>
 
       <div v-loading="loading" class="points-mobile-list">
-        <article v-for="record in filteredRecords" :key="record.id" class="point-record-item">
+        <article v-for="record in overview.recent_records" :key="record.id" class="point-record-item">
           <div class="record-item-head">
             <el-tag class="compact-tag" :type="tagType(record)">{{ record.action }}</el-tag>
             <span :class="['point-change', record.points >= 0 ? 'positive' : 'negative']">{{ formatPoints(record.points) }}</span>
@@ -85,14 +78,14 @@
         </article>
       </div>
 
-      <el-empty v-if="!loading && filteredRecords.length === 0" description="暂无积分明细" />
+      <el-empty v-if="!loading && overview.recent_records.length === 0" description="暂无积分明细" />
     </section>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
-import { Coins, ReceiptText, Search, TrendingDown } from 'lucide-vue-next'
+import { onMounted, reactive, ref } from 'vue'
+import { Coins, ReceiptText, TrendingDown } from 'lucide-vue-next'
 import { apiErrorMessage } from '../../api/errors'
 import { pointsOverview, type PointRecord, type PointsOverview } from '../../api/points'
 import { useAuthStore } from '../../app/stores/auth'
@@ -107,19 +100,8 @@ const overview = reactive<PointsOverview>({
   balance: auth.user?.points ?? 0,
   month_spent: 0,
   total_spent: 0,
+  actions: [],
   recent_records: [],
-})
-
-const actions = computed(() => Array.from(new Set(overview.recent_records.map((record) => record.action).filter(Boolean))))
-const filteredRecords = computed(() => {
-  const term = keyword.value.trim().toLowerCase()
-  const since = rangeSince(rangeFilter.value)
-  return overview.recent_records.filter((record) => {
-    if (actionFilter.value && record.action !== actionFilter.value) return false
-    if (since && record.created_at < since) return false
-    if (term && !`${record.action} ${record.remark}`.toLowerCase().includes(term)) return false
-    return true
-  })
 })
 
 onMounted(load)
@@ -127,7 +109,11 @@ onMounted(load)
 async function load() {
   loading.value = true
   try {
-    const response = await pointsOverview()
+    const response = await pointsOverview({
+      action: actionFilter.value || undefined,
+      keyword: keyword.value.trim() || undefined,
+      range: rangeFilter.value,
+    })
     Object.assign(overview, response.data)
     auth.updatePoints(response.data.balance)
   } catch (error) {
@@ -135,13 +121,6 @@ async function load() {
   } finally {
     loading.value = false
   }
-}
-
-function rangeSince(value: string) {
-  if (value === 'all') return 0
-  const days = Number(value)
-  if (!Number.isFinite(days) || days <= 0) return 0
-  return Math.floor(Date.now() / 1000) - days * 86400
 }
 
 function formatTime(value: number) {
@@ -236,43 +215,8 @@ function tagType(record: PointRecord): 'success' | 'danger' | 'info' {
   font-size: 32px;
 }
 
-.point-record-card {
-  padding: 20px 22px 0;
-}
-
-.table-card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 18px;
-}
-
-.table-card-head h2 {
-  margin: 0;
-  color: #132124;
-  font-size: 18px;
-  line-height: 1.3;
-}
-
-.point-filter-row {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 10px;
-}
-
-.filter-control {
-  width: 142px;
-}
-
-.search-control {
-  width: 240px;
-}
-
-.points-table {
-  margin: 0 -22px;
-  width: calc(100% + 44px);
+.wide-search {
+  flex: 1 1 260px;
 }
 
 .point-change {
@@ -291,6 +235,32 @@ function tagType(record: PointRecord): 'success' | 'danger' | 'info' {
   display: none;
 }
 
+@media (min-width: 981px) {
+  .point-filter-row {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .point-filter-row .toolbar-control {
+    width: 190px;
+    flex: 0 0 190px;
+  }
+
+  .point-filter-row .range-filter {
+    width: 150px;
+    flex-basis: 150px;
+  }
+
+  .point-filter-row .wide-search {
+    min-width: 0;
+    flex: 1 1 auto;
+  }
+
+  .point-filter-row .el-button {
+    flex: 0 0 auto;
+  }
+}
+
 @media (max-width: 980px) {
   .points-overview {
     grid-template-columns: 1fr 1fr;
@@ -298,15 +268,6 @@ function tagType(record: PointRecord): 'success' | 'danger' | 'info' {
 
   .balance-card {
     grid-column: 1 / -1;
-  }
-
-  .table-card-head {
-    align-items: stretch;
-    flex-direction: column;
-  }
-
-  .point-filter-row {
-    justify-content: flex-start;
   }
 }
 
@@ -337,16 +298,6 @@ function tagType(record: PointRecord): 'success' | 'danger' | 'info' {
     font-size: 30px;
   }
 
-  .point-record-card {
-    padding: 16px;
-  }
-
-  .point-filter-row,
-  .filter-control,
-  .search-control {
-    width: 100%;
-  }
-
   .points-table {
     display: none;
   }
@@ -355,6 +306,7 @@ function tagType(record: PointRecord): 'success' | 'danger' | 'info' {
     min-height: 120px;
     display: grid;
     gap: 10px;
+    padding: 14px;
   }
 
   .point-record-item {
