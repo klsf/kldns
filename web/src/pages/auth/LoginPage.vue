@@ -60,6 +60,7 @@
         </div>
       </aside>
     </section>
+    <p class="auth-version">版本 {{ APP_VERSION }}</p>
   </main>
 </template>
 
@@ -72,6 +73,7 @@ import { useAuthStore } from '../../app/stores/auth'
 import { apiErrorMessage } from '../../api/errors'
 import { getTurnstileSettings, type TurnstilePublicSettings } from '../../api/settings'
 import TurnstileWidget from '../../components/TurnstileWidget.vue'
+import { APP_VERSION } from '../../app/version'
 
 const form = reactive({
   login: '',

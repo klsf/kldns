@@ -216,6 +216,20 @@
   color: #2ff0b2;
 }
 
+.auth-version {
+  position: absolute;
+  bottom: 16px;
+  left: 50%;
+  z-index: 2;
+  margin: 0;
+  color: rgba(213, 233, 235, 0.72);
+  font-size: 13px;
+  font-weight: 800;
+  line-height: 1;
+  transform: translateX(-50%);
+  white-space: nowrap;
+}
+
 .auth-signal {
   min-width: 0;
   display: grid;

@@ -3,8 +3,12 @@
     <header class="page-header page-header-with-action">
       <div>
         <h1>开放 API</h1>
+        <p class="resource-note">创建 API Token 后，可通过开放 API 查询二级域名并维护解析记录。</p>
       </div>
-      <el-button type="primary" @click="dialogVisible = true"><KeyRound :size="17" />创建令牌</el-button>
+      <div class="header-actions">
+        <el-button @click="$router.push('/home/api-docs')"><BookOpen :size="16" />API 文档</el-button>
+        <el-button type="primary" @click="dialogVisible = true"><KeyRound :size="17" />创建令牌</el-button>
+      </div>
     </header>
     <el-alert type="warning" show-icon title="令牌明文只在创建时显示一次" />
     <div class="resource-card">
@@ -59,7 +63,7 @@
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { KeyRound } from 'lucide-vue-next'
+import { BookOpen, KeyRound } from 'lucide-vue-next'
 import { createToken, deleteToken, listTokens, type TokenItem } from '../../api/tokens'
 
 const tokens = ref<TokenItem[]>([])
@@ -121,5 +125,19 @@ function formatTime(value: number) {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
   font-size: 12px;
   white-space: nowrap;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+@media (max-width: 680px) {
+  .header-actions {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

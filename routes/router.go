@@ -15,7 +15,7 @@ func NewRouter() *gin.Engine {
 	router.GET("/favicon.svg", spaHandler((*controllers.SPAController).Favicon))
 	router.GET("/assets/*filepath", spaHandler((*controllers.SPAController).Asset))
 
-	api := router.Group("/api/v1", middleware.NoSniff())
+	api := router.Group("/api", middleware.NoSniff())
 	{
 		api.GET("/health", apiHandler((*controllers.HealthController).Get))
 		api.POST("/install/admin", apiHandler((*controllers.InstallController).CreateAdmin))
@@ -25,7 +25,7 @@ func NewRouter() *gin.Engine {
 		api.GET("/public/domains", apiHandler((*controllers.DomainAPIController).Public))
 		api.GET("/settings/turnstile", apiHandler((*controllers.SettingsAPIController).Turnstile))
 
-		auth := api.Group("", middleware.APIBearerAuth())
+		auth := api.Group("", middleware.APIBearerAuth(), middleware.OpenAPIAccessOnly())
 		{
 			auth.GET("/auth/me", apiHandler((*controllers.AuthController).Me))
 			auth.PUT("/auth/password", apiHandler((*controllers.AuthController).ChangePassword))
@@ -44,7 +44,7 @@ func NewRouter() *gin.Engine {
 			auth.DELETE("/tokens/:id", apiHandler((*controllers.TokenAPIController).Delete))
 		}
 
-		admin := api.Group("/admin", middleware.APIBearerAuth(), middleware.AdminOnly())
+		admin := api.Group("/admin", middleware.APIBearerAuth(), middleware.OpenAPIAccessOnly(), middleware.AdminOnly())
 		{
 			admin.GET("/users", apiHandler((*controllers.AdminListController).Users))
 			admin.PUT("/users/:id", apiHandler((*controllers.AdminListController).SaveUser))

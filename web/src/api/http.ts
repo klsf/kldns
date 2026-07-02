@@ -10,7 +10,7 @@ export const TOKEN_STORAGE_KEY = 'kldns:token'
 export const USER_STORAGE_KEY = 'kldns:user'
 
 export const http = axios.create({
-  baseURL: '/api/v1',
+  baseURL: '/api',
   timeout: 15000,
 })
 

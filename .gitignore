@@ -10,3 +10,4 @@ web/dist/
 web/tsconfig.tsbuildinfo
 .playwright-mcp/
 outputs/
+AGENTS.md

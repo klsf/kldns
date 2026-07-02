@@ -18,7 +18,7 @@ func TestHealthRoute(t *testing.T) {
 	router := NewRouter()
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/health", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/health", nil)
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusOK {
@@ -34,7 +34,7 @@ func TestProtectedRouteRequiresBearerToken(t *testing.T) {
 	router := NewRouter()
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/auth/me", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/auth/me", nil)
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusUnauthorized {
@@ -47,7 +47,7 @@ func TestAdminLoginRouteIsPublic(t *testing.T) {
 	router := NewRouter()
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodPost, "/api/v1/admin/auth/login", nil)
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/auth/login", nil)
 	router.ServeHTTP(rec, req)
 
 	if rec.Code == http.StatusUnauthorized {
@@ -63,7 +63,7 @@ func TestAPINoRouteReturnsNotFound(t *testing.T) {
 	router := NewRouter()
 
 	rec := httptest.NewRecorder()
-	req := httptest.NewRequest(http.MethodGet, "/api/v1/missing", nil)
+	req := httptest.NewRequest(http.MethodGet, "/api/missing", nil)
 	router.ServeHTTP(rec, req)
 
 	if rec.Code != http.StatusNotFound {

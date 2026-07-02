@@ -29,7 +29,7 @@
         </el-table-column>
         <el-table-column label="积分" width="110">
           <template #default="{ row }">
-            <span class="points-value">{{ row.points }}</span>
+            <el-button text type="primary" class="points-value" title="调整积分" @click="openPointDialog(row)">{{ row.points }}</el-button>
           </template>
         </el-table-column>
         <el-table-column label="状态" width="120">
@@ -42,24 +42,10 @@
             <div class="table-actions">
               <el-button v-if="row.status === 1 && !isProtectedUser(row)" text type="primary" @click="approve(row)">审核通过</el-button>
               <el-button text type="primary" @click="openEdit(row)">编辑</el-button>
-              <el-button text type="primary" @click="openPointDialog(row)">
-                <Coins :size="14" />
-                <span>积分</span>
+              <el-button text type="primary" :disabled="isProtectedUser(row)" @click="toggleDisabled(row)">
+                {{ row.status === 0 ? '启用' : '禁用' }}
               </el-button>
-              <el-dropdown trigger="click" @command="handleRowCommand(row, $event)">
-                <el-button text type="primary">
-                  <span>更多</span>
-                  <ChevronDown :size="14" />
-                </el-button>
-                <template #dropdown>
-                  <el-dropdown-menu>
-                    <el-dropdown-item command="toggle" :disabled="isProtectedUser(row)">
-                      {{ row.status === 0 ? '启用' : '禁用' }}
-                    </el-dropdown-item>
-                    <el-dropdown-item command="delete" :disabled="isProtectedUser(row)" class="danger-dropdown-item">删除</el-dropdown-item>
-                  </el-dropdown-menu>
-                </template>
-              </el-dropdown>
+              <el-button text type="danger" :disabled="isProtectedUser(row)" @click="remove(row)">删除</el-button>
             </div>
           </template>
         </el-table-column>
@@ -141,7 +127,6 @@
 import { apiErrorMessage } from '../../api/errors'
 import { onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ChevronDown, Coins } from 'lucide-vue-next'
 import { adjustAdminUserPoints, deleteAdminUser, listAdminGroups, listAdminUsersPage, saveAdminUser, type AdminGroup, type AdminUser } from '../../api/admin'
 
 type PointAdjustMode = 'increase' | 'decrease'
@@ -276,16 +261,6 @@ async function toggleDisabled(row: AdminUser) {
   await updateUser(row, { status: nextStatus }, nextStatus === 0 ? '用户已禁用' : '用户已启用')
 }
 
-function handleRowCommand(row: AdminUser, command: string | number | object) {
-  const action = String(command)
-  if (action === 'toggle') {
-    void toggleDisabled(row)
-  }
-  if (action === 'delete') {
-    void remove(row)
-  }
-}
-
 async function remove(row: AdminUser) {
   try {
     const { value } = await ElMessageBox.prompt(`请输入用户名 ${row.username} 确认删除。此操作会删除该会员的所有二级域名，以及本地和平台上的解析记录。`, '删除用户', {
@@ -395,8 +370,14 @@ function escapeRegExp(value: string) {
 }
 
 .points-value {
-  color: #102227;
+  min-height: 24px;
+  padding: 0 6px;
+  color: var(--accent-strong);
   font-weight: 900;
+}
+
+.points-value:hover {
+  background: #e7fbf4;
 }
 
 .point-adjust-panel {
@@ -444,10 +425,6 @@ function escapeRegExp(value: string) {
 
 .point-remark-field {
   grid-column: 1 / -1;
-}
-
-:global(.danger-dropdown-item) {
-  color: var(--danger);
 }
 
 @media (max-width: 980px) {

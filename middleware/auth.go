@@ -72,6 +72,33 @@ func SourceFromContext(ctx stdctx.Context) string {
 	return AuthSourceWeb
 }
 
+func OpenAPIAccessOnly() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		if SourceFromContext(ctx.Request.Context()) != AuthSourceAPI {
+			ctx.Next()
+			return
+		}
+		if !isOpenAPIAllowedRoute(ctx.Request.Method, ctx.FullPath()) {
+			writeAuthError(ctx, http.StatusForbidden, "FORBIDDEN", "API Token 仅允许管理解析记录和查询已注册二级域名")
+			return
+		}
+		ctx.Next()
+	}
+}
+
+func isOpenAPIAllowedRoute(method string, fullPath string) bool {
+	switch method {
+	case http.MethodGet:
+		return fullPath == "/api/subdomains"
+	case http.MethodPost:
+		return fullPath == "/api/records"
+	case http.MethodPut, http.MethodDelete:
+		return fullPath == "/api/records/:id"
+	default:
+		return false
+	}
+}
+
 func AdminOnly() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
 		user, ok := UserFromContext(ctx.Request.Context())
