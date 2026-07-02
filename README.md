@@ -79,17 +79,6 @@ go build -o kldns.exe .
 
 二进制会内嵌迁移文件和前端构建产物。`config.yaml` 和 `data/kldns.db` 仍为外部运行文件。
 
-## 发布
-
-推送版本标签后会自动打包并创建 GitHub Release：
-
-```powershell
-git tag 1.0.5
-git push origin 1.0.5
-```
-
-Release 包会包含可执行文件、`README.md` 和 `config.yaml`。登录页版本号优先使用标签版本。
-
 ## 数据库迁移
 
 程序启动时会自动执行内嵌的 `migrations/` 迁移，并记录到 `schema_migrations`。修改表结构时必须新增迁移文件。
