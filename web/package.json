@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@vitejs/plugin-vue": "^5.2.4",
-    "axios": "^1.9.0",
+    "axios": "^1.20.0",
     "element-plus": "^2.9.11",
     "lucide-vue-next": "^0.511.0",
     "pinia": "^3.0.2",
